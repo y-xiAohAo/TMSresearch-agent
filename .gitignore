@@ -1,0 +1,28 @@
+# ---- 密钥（绝不入库）----
+.env
+
+# ---- Python ----
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# ---- 运行产物 ----
+artifacts/
+*.smash
+logs/
+
+# ---- SDD-RIPER 工作产物（骨架保留，内容不入库）----
+mydocs/specs/*
+mydocs/codemap/*
+mydocs/context/*
+mydocs/archive/*
+!mydocs/**/.gitkeep
+
+# ---- 系统/编辑器 ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
