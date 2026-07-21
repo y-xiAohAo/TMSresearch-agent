@@ -15,12 +15,15 @@ from typing import Any
 from research_agent.config import SETTINGS
 from research_agent.prompts import RESEARCH_SYSTEM_PROMPT
 from research_agent.tools import check_requirements, register_all_tools
+from research_agent.tracking import track_tool
 
 MAX_TURNS = 14
 
 
 def _json_result(fn):
     """把工具 handler 的 dict 返回统一序列化为 JSON 字符串（引擎对返回值做字符串化）。"""
+
+    fn = track_tool(fn)
 
     def wrapper(*args, **kwargs):
         result = fn(*args, **kwargs)
@@ -48,7 +51,8 @@ def build_agent():
         base_url=SETTINGS.deepseek_base_url,
         max_tokens=4096,
         temperature=0.2,
-        timeout=120.0,
+        timeout=60.0,
+        max_retries=1,
     )
     # tools.enabled=[]：不注册 litmusAgent 默认工具（sandbox_exec/file_* 等）
     config = AgentConfig()
