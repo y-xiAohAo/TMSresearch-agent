@@ -27,7 +27,11 @@ User question
 
 | 工具 | 类别 | 说明 |
 |---|---|---|
-| `web_search` | literature | Tavily 联网检索 |
+| `web_search` | literature | Tavily 联网检索（泛网页/资讯） |
+| `arxiv_search` | literature | arXiv 精确文献检索（分类/日期/作者） |
+| `arxiv_fetch` | literature | arXiv 元数据获取 + PDF 归档 |
+| `arxiv_read_pdf` | literature | arXiv PDF 按页阅读（pymupdf） |
+| `lit_extract_params` | literature | 论文→仿真参数桥（LLM 抽取+引句） |
 | `sim4life_manual_qa` | knowledge | Sim4Life 手册 RAG（需先启动 RAG 服务） |
 | `s4l_write_script` | simulation | 写 s4l_v1 脚本（自动加 headless 引导头） |
 | `s4l_run_script` | simulation | headless 执行 Sim4Life 建模/仿真脚本 |

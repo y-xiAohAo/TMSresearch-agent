@@ -11,7 +11,17 @@ from pathlib import Path
 
 from research_agent.config import SETTINGS
 from research_agent.descriptor import ToolDescriptor
-from research_agent.tools import s4l_script, sim4life_manual_qa, tms_optimize, web_search, wiki
+from research_agent.tools import (
+    arxiv_fetch,
+    arxiv_read_pdf,
+    arxiv_search,
+    lit_extract_params,
+    s4l_script,
+    sim4life_manual_qa,
+    tms_optimize,
+    web_search,
+    wiki,
+)
 
 # 手动注册列表（M2 换自动发现）
 ALL_DESCRIPTORS: list[ToolDescriptor] = [
@@ -22,6 +32,10 @@ ALL_DESCRIPTORS: list[ToolDescriptor] = [
     tms_optimize.DESCRIPTOR,
     wiki.DESCRIPTOR,
     wiki.SEARCH_DESCRIPTOR,
+    arxiv_search.DESCRIPTOR,
+    arxiv_fetch.DESCRIPTOR,
+    arxiv_read_pdf.DESCRIPTOR,
+    lit_extract_params.DESCRIPTOR,
 ]
 
 def _check_rag_service() -> bool:
@@ -34,12 +48,24 @@ def _check_rag_service() -> bool:
         return False
 
 
+def _check_network_arxiv() -> bool:
+    try:
+        import requests
+
+        resp = requests.get("https://export.arxiv.org/api/query?search_query=all:test&max_results=1", timeout=8)
+        return resp.status_code == 200
+    except Exception:
+        return False
+
+
 # requires 资源名 -> 就绪检查函数
 _REQUIRE_CHECKS = {
     "tavily_api_key": lambda: bool(SETTINGS.tavily_api_key),
     "rag_service": _check_rag_service,
     "sim4life_installed": lambda: Path(SETTINGS.s4l_python).is_file() and Path(SETTINGS.s4l_home).is_dir(),
     "tms_venv": lambda: Path(SETTINGS.tms_python).is_file(),
+    "network_arxiv": _check_network_arxiv,
+    "deepseek_api_key": lambda: bool(SETTINGS.deepseek_api_key),
 }
 
 
