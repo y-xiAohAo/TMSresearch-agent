@@ -84,10 +84,55 @@ class ClientParsingTests(unittest.TestCase):
         self.assertGreaterEqual(time.monotonic() - start, 0.18)
 
     def test_fetch_error_entry_returns_none(self):
+        # arXiv 报错 entry 无作者 → 判 not_found
         client = _client_no_net()
-        error_xml = _SAMPLE_XML.replace("Magnetic Materials for TMS", "Error")
+        error_xml = _SAMPLE_XML.replace(
+            '<author><name>Alice Zhang</name></author>', ""
+        ).replace('<author><name>Bob Li</name></author>', "")
         with patch.object(client, "_get", return_value=error_xml):
             self.assertIsNone(client.fetch("0000.00000"))
+
+    def test_error_titled_real_paper_not_mistaken_as_missing(self):
+        # 标题以 "Error" 开头但有作者的真论文不得误判为不存在
+        client = _client_no_net()
+        error_titled = _SAMPLE_XML.replace(
+            "Magnetic Materials for TMS", "Error bounds for coil design"
+        )
+        with patch.object(client, "_get", return_value=error_titled):
+            paper = client.fetch("2511.00744")
+        self.assertIsNotNone(paper)
+        self.assertEqual(paper.title, "Error bounds for coil design")
+
+    def test_non_xml_response_raises_runtime_error(self):
+        client = _client_no_net()
+        with patch.object(client, "_get", return_value="Service temporarily overloaded, retry later"):
+            with self.assertRaises(RuntimeError) as ctx:
+                client.search("tms")
+            self.assertIn("无法解析", str(ctx.exception))
+
+    def test_download_pdf_sanitizes_old_style_id(self):
+        import tempfile
+
+        client = _client_no_net()
+        dest_dir = Path(tempfile.mkdtemp())
+        pdf_bytes = b"%PDF-1.4 fake content"
+        with patch("research_agent.literature.client.requests.get") as mock_get:
+            resp = MagicMock()
+            resp.content = pdf_bytes
+            resp.raise_for_status = MagicMock()
+            mock_get.return_value = resp
+            path = client.download_pdf("hep-th/9901001", dest_dir=dest_dir)
+        self.assertTrue(path.is_file())
+        self.assertNotIn("/", path.name.replace(".pdf", ""))
+        self.assertIn(dest_dir.resolve(), path.resolve().parents)
+
+    def test_download_pdf_rejects_path_escape(self):
+        import tempfile
+
+        client = _client_no_net()
+        dest_dir = Path(tempfile.mkdtemp())
+        with self.assertRaises(RuntimeError):
+            client.download_pdf("../../evil", dest_dir=dest_dir)
 
 
 class PageRangeTests(unittest.TestCase):
@@ -98,28 +143,79 @@ class PageRangeTests(unittest.TestCase):
         self.assertEqual(_parse_page_range("2,5"), [2, 5])
         self.assertEqual(_parse_page_range("4"), [4])
 
+    def test_dedupe(self):
+        self.assertEqual(_parse_page_range("1,1,2"), [1, 2])
+
+    def test_reverse_range_raises(self):
+        with self.assertRaises(ValueError):
+            _parse_page_range("3-1")
+
     def test_fallback(self):
         self.assertEqual(_parse_page_range("abc"), [1])
 
 
 class ExtractionTests(unittest.TestCase):
+    _PAPER = (
+        "We propose a figure-8 coil of radius 0.05 m positioned 2cm above head. "
+        "The target field strength is 2.0 T at 0.02 m depth in motor cortex. "
+        "Optimization used NSGA2 with pop_size 40 and n_gen 60 for focus."
+    )
+
+    _GOOD = {
+        "coil_geometry": {"type": "figure8", "radius_m": 0.05, "position": "2cm above head"},
+        "target_field": {"strength_T": 2.0, "focal_depth_m": 0.02, "region": "motor cortex"},
+        "simulation": {"solver": None, "mesh_cells": None, "boundary": None},
+        "algorithm": {"name": "NSGA2", "pop_size": 40, "n_gen": 60, "objectives": ["focus"]},
+        "evidence_quotes": {
+            "coil_geometry.type": "figure-8 coil",
+            "coil_geometry.radius_m": "radius 0.05 m",
+            "coil_geometry.position": "2cm above head",
+        },
+        "confidence": "high",
+    }
+
     def test_valid_payload_becomes_entity(self):
-        good = json.dumps({
-            "coil_geometry": {"type": "figure8", "radius_m": 0.05, "position": "2cm above head"},
-            "target_field": {"strength_T": 2.0, "focal_depth_m": 0.02, "region": "motor cortex"},
-            "simulation": {"solver": "FDTD", "mesh_cells": None, "boundary": None},
-            "algorithm": {"name": "NSGA2", "pop_size": 40, "n_gen": 60, "objectives": ["focus"]},
-            "evidence_quotes": {"coil_geometry.radius_m": "radius 0.05 m"},
-            "confidence": "high",
-        })
-        result = extract_sim_params("paper text", lambda msgs: good)
+        result = extract_sim_params(self._PAPER, lambda msgs: json.dumps(self._GOOD))
         from research_agent.literature.models import SimParamExtraction
 
         self.assertIsInstance(result, SimParamExtraction)
         self.assertEqual(result.coil_geometry.type, "figure8")
         self.assertEqual(result.coil_geometry.radius_m, 0.05)
         self.assertEqual(result.confidence, "high")
-        self.assertIn("coil_geometry.radius_m", result.evidence_quotes)
+
+    def test_json_block_extracted_from_prose(self):
+        # LLM 输出带前后散文时，raw_decode 应只取第一个完整 JSON 对象
+        prose = "这是抽取结果：" + json.dumps(self._GOOD) + " 希望对你有帮助，{详见上文}"
+        result = extract_sim_params(self._PAPER, lambda msgs: prose)
+        self.assertEqual(result.coil_geometry.radius_m, 0.05)
+
+    def test_llm_infrastructure_error_propagates_not_mislabeled(self):
+        # P0-1 回归：llm_chat 抛异常必须向上传播，不得误报 extraction_failed，且不得 NameError
+        def failing_llm(msgs):
+            raise ConnectionError("api down")
+
+        with self.assertRaises(ConnectionError):
+            extract_sim_params("paper", failing_llm)
+
+    def test_evidence_coverage_enforced(self):
+        # P1-6：非 null 字段缺引句 → 校验失败
+        payload = dict(self._GOOD)
+        payload["evidence_quotes"] = {}  # 清空引句
+        result = extract_sim_params(self._PAPER, lambda msgs: json.dumps(payload), max_retries=0)
+        self.assertEqual(result["status"], "extraction_failed")
+        self.assertIn("引句", result["raw"])
+
+    def test_fabricated_quote_rejected(self):
+        # P1-6：引句不是原文子串 → 判编造
+        payload = dict(self._GOOD)
+        payload["evidence_quotes"] = {
+            "coil_geometry.type": "a completely invented sentence not in paper",
+            "coil_geometry.radius_m": "radius 0.05 m",
+            "coil_geometry.position": "2cm above head",
+        }
+        result = extract_sim_params(self._PAPER, lambda msgs: json.dumps(payload), max_retries=0)
+        self.assertEqual(result["status"], "extraction_failed")
+        self.assertIn("非原文子串", result["raw"])
 
     def test_null_fields_for_unmentioned(self):
         payload = json.dumps({
@@ -133,6 +229,21 @@ class ExtractionTests(unittest.TestCase):
         result = extract_sim_params("paper", lambda msgs: payload)
         self.assertIsNone(result.target_field.strength_T)
         self.assertIsNone(result.algorithm.name)
+
+    def test_coil_geometry_null_object_accepted(self):
+        # P1-7 回归：coil_geometry 整体为 null 不得 AttributeError
+        payload = json.dumps({
+            "coil_geometry": None,
+            "target_field": {"strength_T": None, "focal_depth_m": None, "region": None},
+            "simulation": {"solver": None, "mesh_cells": None, "boundary": None},
+            "algorithm": {"name": None, "pop_size": None, "n_gen": None, "objectives": None},
+            "evidence_quotes": {},
+            "confidence": "low",
+        })
+        result = extract_sim_params("paper", lambda msgs: payload)
+        from research_agent.literature.models import SimParamExtraction
+
+        self.assertIsInstance(result, SimParamExtraction)
 
     def test_invalid_json_retries_then_fails(self):
         calls = []

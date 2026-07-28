@@ -10,12 +10,14 @@ from research_agent.literature.pdf import pdf_page_count
 
 
 def _arxiv_fetch(arxiv_id: str, download_pdf: bool = False) -> dict:
-    """获取单篇文献详情，可选下载 PDF，返回 {paper, pdf_path?, pdf_pages?}。"""
-    client = ArxivClient()
+    """获取单篇文献详情，可选下载 PDF，返回 {status, paper, pdf_path?, pdf_pages?}。"""
     try:
+        client = ArxivClient()
         paper = client.fetch(arxiv_id)
     except RuntimeError as exc:
         return {"status": "network_unavailable", "error": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "error": f"获取失败：{exc}"}
     if paper is None:
         return {"status": "not_found", "arxiv_id": arxiv_id}
     result = {

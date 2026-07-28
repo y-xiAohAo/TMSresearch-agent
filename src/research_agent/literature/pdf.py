@@ -24,21 +24,28 @@ def read_pdf_pages(pdf_path: str, page_range: str = "1-3", max_chars: int = 8000
     pages = _parse_page_range(page_range)
     text_parts: list[str] = []
     pages_read: list[int] = []
-    with fitz.open(str(path)) as doc:
-        total = doc.page_count
-        for p in pages:
-            if 1 <= p <= total:
-                page = doc.load_page(p - 1)
-                text_parts.append(f"--- Page {p} ---\n{page.get_text('text')}")
-                pages_read.append(p)
+    try:
+        with fitz.open(str(path)) as doc:
+            if doc.needs_pass:
+                raise RuntimeError(f"PDF 已加密，无法读取：{pdf_path}")
+            total = doc.page_count
+            for p in pages:
+                if 1 <= p <= total:
+                    page = doc.load_page(p - 1)
+                    text_parts.append(f"--- Page {p} ---\n{page.get_text('text')}")
+                    pages_read.append(p)
+    except RuntimeError:
+        raise
+    except Exception as exc:
+        raise RuntimeError(f"无法打开或解析 PDF：{pdf_path}（{exc}）") from exc
     text = "\n".join(text_parts)
     if len(text) > max_chars:
-        text = text[:max_chars] + "\n...[truncated]"
+        text = text[:max_chars] + "\n...[内容已截断，未含全部请求页]"
     return {"text": text, "pages_read": pages_read}
 
 
 def _parse_page_range(page_range: str) -> list[int]:
-    """解析 "1-3" / "2" / "1,3,5" 为页码列表（1-based）。"""
+    """解析 "1-3" / "2" / "1,3,5" 为去重页码列表（1-based）。反向区间抛 ValueError。"""
     pages: list[int] = []
     for part in str(page_range).split(","):
         part = part.strip()
@@ -48,15 +55,17 @@ def _parse_page_range(page_range: str) -> list[int]:
             start_s, end_s = part.split("-", 1)
             try:
                 start, end = int(start_s), int(end_s)
-                pages.extend(range(max(1, start), end + 1))
             except ValueError:
                 continue
+            if start > end:
+                raise ValueError(f"反向页码区间非法：{part}")
+            pages.extend(range(max(1, start), end + 1))
         else:
             try:
                 pages.append(int(part))
             except ValueError:
                 continue
-    return pages or [1]
+    return list(dict.fromkeys(pages)) or [1]
 
 
 def pdf_page_count(pdf_path: str) -> int:

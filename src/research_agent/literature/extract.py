@@ -45,20 +45,35 @@ _EXTRACTION_PROMPT = """你是仿真参数抽取器。从下面的论文内容�
 _REQUIRED_TOP_KEYS = ("coil_geometry", "target_field", "simulation", "algorithm", "evidence_quotes", "confidence")
 
 
-def _validate_payload(data: dict) -> None:
-    """校验 LLM 抽取的 JSON 结构，不合法抛 ValueError。"""
+def _validate_payload(data: dict, paper_text: str = "") -> None:
+    """校验 LLM 抽取的 JSON 结构，不合法抛 ValueError。
+
+    paper_text 非空时，抽查 evidence_quotes 的引句是否为原文子串（防编造）。
+    """
     if not isinstance(data, dict):
         raise ValueError("payload 不是 dict")
     for key in _REQUIRED_TOP_KEYS:
         if key not in data:
             raise ValueError(f"缺少字段：{key}")
-    cg_type = data.get("coil_geometry", {}).get("type")
+    cg = data.get("coil_geometry") or {}
+    cg_type = cg.get("type")
     if cg_type is not None and cg_type not in ("loop", "figure8", "custom", ""):
         raise ValueError(f"coil_geometry.type 非法：{cg_type}")
     if data.get("confidence") not in ("high", "medium", "low"):
         raise ValueError(f"confidence 非法：{data.get('confidence')}")
-    if not isinstance(data.get("evidence_quotes"), dict):
+    quotes = data.get("evidence_quotes")
+    if not isinstance(quotes, dict):
         raise ValueError("evidence_quotes 必须是 dict")
+    # evidence 覆盖检查：非 null 的 coil_geometry 字段必须有对应引句
+    for field_key, value in cg.items():
+        if value is not None and f"coil_geometry.{field_key}" not in quotes:
+            raise ValueError(f"非 null 字段缺少引句：coil_geometry.{field_key}")
+    # 引句真实性抽查：引句必须为论文原文子串（归一化空白后）
+    if paper_text:
+        norm_text = " ".join(paper_text.split())
+        for field_key, quote in quotes.items():
+            if quote and " ".join(str(quote).split()) not in norm_text:
+                raise ValueError(f"引句非原文子串（疑似编造）：{field_key}")
 
 
 def _to_entity(data: dict) -> SimParamExtraction:
@@ -94,12 +109,16 @@ def _to_entity(data: dict) -> SimParamExtraction:
 
 
 def _extract_json_block(text: str) -> dict:
-    """从 LLM 输出中提取第一个 JSON 对象。"""
+    """从 LLM 输出中提取第一个 JSON 对象（增量解码，容忍前后散文）。"""
+    decoder = json.JSONDecoder()
     start = text.find("{")
-    end = text.rfind("}")
-    if start < 0 or end <= start:
+    if start < 0:
         raise ValueError("输出中未找到 JSON")
-    return json.loads(text[start : end + 1])
+    try:
+        obj, _ = decoder.raw_decode(text[start:])
+        return obj
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"JSON 解析失败：{exc}") from exc
 
 
 def extract_sim_params(
@@ -111,22 +130,24 @@ def extract_sim_params(
 
     llm_chat: 同步调用签名 (messages: list[dict]) -> str（返回文本）。
     成功返回 SimParamExtraction；校验重试后仍失败返回 {"status": "extraction_failed", "raw": ...}。
+    llm_chat 自身抛出的基础设施异常（网络/鉴权）直接向上传播，不误报为 extraction_failed。
     """
     prompt = _EXTRACTION_PROMPT.format(text=paper_text[:8000])
     messages = [{"role": "user", "content": prompt}]
     last_raw = ""
+    raw = ""
     for attempt in range(max_retries + 1):
+        raw = llm_chat(messages)  # 基础设施异常直接传播，不进校验重试
         try:
-            raw = llm_chat(messages)
             last_raw = raw
             data = _extract_json_block(raw)
-            _validate_payload(data)
+            _validate_payload(data, paper_text=paper_text)
             return _to_entity(data)
         except Exception as exc:  # noqa: BLE001
             last_raw = f"{type(exc).__name__}: {exc} | raw={last_raw[-500:]}"
             if attempt < max_retries:
                 messages = messages + [
-                    {"role": "assistant", "content": raw if isinstance(raw, str) else ""},
-                    {"role": "user", "content": "上次输出未通过校验，请只输出合法 JSON，未提及字段填 null。"},
+                    {"role": "assistant", "content": raw},
+                    {"role": "user", "content": f"上次输出未通过校验（{exc}），请只输出合法 JSON，未提及字段填 null，引句必须是原文句子。"},
                 ]
     return {"status": "extraction_failed", "raw": last_raw}

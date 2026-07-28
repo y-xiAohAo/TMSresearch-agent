@@ -71,6 +71,8 @@ class ArxivClient:
             payload = json.loads(key.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
+        if not isinstance(payload, dict):
+            return None
         if time.time() - payload.get("ts", 0) > _CACHE_TTL_S:
             return None
         return payload.get("data")
@@ -99,12 +101,21 @@ class ArxivClient:
         raise RuntimeError(f"arXiv API 请求失败：{last_exc}")
 
     # ---- 解析 ----
-    def _parse_entry(self, entry: ET.Element) -> PaperDetails:
+    def _parse_xml(self, xml_text: str) -> ET.Element:
+        """解析 arXiv XML；非 XML 内容（如过载时的 HTML 错误页）转为带上下文的错误。"""
+        try:
+            return ET.fromstring(xml_text)
+        except ET.ParseError as exc:
+            raise RuntimeError(f"arXiv 返回了无法解析的内容（非 XML）：{exc}") from exc
+
+    def _parse_entry(self, entry: ET.Element) -> PaperDetails | None:
         def _text(tag: str, default: str = "") -> str:
             el = entry.find(f"{{{_ATOM_NS}}}{tag}")
             return (el.text or default).strip() if el is not None and el.text else default
 
         raw_id = _text("id")
+        if not raw_id:
+            return None  # 主键缺失的 entry 直接跳过
         arxiv_id, version = normalize_arxiv_id(raw_id.rsplit("/", 1)[-1])
         authors = [
             (a.find(f"{{{_ATOM_NS}}}name").text or "").strip()
@@ -166,13 +177,15 @@ class ArxivClient:
         else:
             entries_xml = self._get(params)
             self._cache_put(key, entries_xml)
-        root = ET.fromstring(entries_xml)
-        return [self._parse_entry(e) for e in root.findall(f"{{{_ATOM_NS}}}entry")]
+        root = self._parse_xml(entries_xml)
+        entries = root.findall(f"{{{_ATOM_NS}}}entry")
+        return [p for p in (self._parse_entry(e) for e in entries) if p is not None]
 
     def fetch(self, arxiv_id: str) -> PaperDetails | None:
-        """按 ID 获取单篇详情；不存在返回 None。"""
-        norm_id, _ = normalize_arxiv_id(arxiv_id)
-        params = {"id_list": norm_id, "max_results": 1}
+        """按 ID 获取单篇详情；不存在返回 None。用户显式给版本号时按该版本获取。"""
+        norm_id, version = normalize_arxiv_id(arxiv_id)
+        query_id = norm_id + version if version != "v1" or "v" in arxiv_id else norm_id
+        params = {"id_list": query_id, "max_results": 1}
         key = self._cache_key(params)
         cached = self._cache_get(key)
         if cached is not None:
@@ -180,28 +193,46 @@ class ArxivClient:
         else:
             entries_xml = self._get(params)
             self._cache_put(key, entries_xml)
-        root = ET.fromstring(entries_xml)
+        root = self._parse_xml(entries_xml)
         entries = root.findall(f"{{{_ATOM_NS}}}entry")
         if not entries:
             return None
         details = self._parse_entry(entries[0])
-        # arXiv 对不存在的 ID 返回标题为 "Error" 的 entry
-        if details.title.lower().startswith("error"):
+        if details is None:
+            return None
+        # arXiv 对不存在的 ID 返回报错 entry（无作者、标题为 Error）；
+        # 用"无作者"判定，避免误杀 "Error bounds for..." 类真论文
+        if not details.authors:
             return None
         return details
+
+    @staticmethod
+    def _safe_filename(raw: str) -> str:
+        """把 arxiv_id 转成安全文件名（旧式 ID 的 '/'、路径穿越字符统一替换）。"""
+        return re.sub(r"[^\w.\-]", "_", raw)
 
     def download_pdf(self, arxiv_id: str, dest_dir: Path | None = None) -> Path:
         """下载 PDF 到 dest_dir（默认 artifacts/papers/），返回路径。"""
         norm_id, _ = normalize_arxiv_id(arxiv_id)
         dest_dir = dest_dir or (Path(SETTINGS.artifacts_dir) / "papers")
         dest_dir.mkdir(parents=True, exist_ok=True)
-        dest = dest_dir / f"{norm_id}.pdf"
+        dest = (dest_dir / f"{self._safe_filename(norm_id)}.pdf").resolve()
+        # 路径逃逸防护：最终路径必须仍在 dest_dir 内
+        if dest_dir.resolve() not in dest.parents and dest != dest_dir.resolve():
+            raise RuntimeError(f"非法的输出路径：{dest}")
         if dest.is_file():
             return dest
         self._throttle()
-        resp = requests.get(f"https://arxiv.org/pdf/{norm_id}", timeout=60)
-        resp.raise_for_status()
-        if not resp.content.startswith(b"%PDF"):
-            raise RuntimeError(f"arXiv {norm_id} 未返回有效 PDF")
-        dest.write_bytes(resp.content)
-        return dest
+        last_exc: Exception | None = None
+        for _ in range(2):
+            try:
+                resp = requests.get(f"https://arxiv.org/pdf/{norm_id}", timeout=60)
+                resp.raise_for_status()
+                if not resp.content.startswith(b"%PDF"):
+                    raise RuntimeError(f"arXiv {norm_id} 未返回有效 PDF")
+                dest.write_bytes(resp.content)
+                return dest
+            except requests.RequestException as exc:
+                last_exc = exc
+                time.sleep(1.0)
+        raise RuntimeError(f"arXiv PDF 下载失败：{last_exc}")

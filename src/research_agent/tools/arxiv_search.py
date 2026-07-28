@@ -32,6 +32,8 @@ def _arxiv_search(
         )
     except RuntimeError as exc:
         return {"status": "network_unavailable", "error": str(exc), "papers": []}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "error": f"检索失败：{exc}", "papers": []}
     return {
         "status": "ok",
         "papers": [

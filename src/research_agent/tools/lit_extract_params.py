@@ -35,31 +35,44 @@ def _llm_chat(messages: list[dict]) -> str:
 
 def _lit_extract_params(arxiv_id: str) -> dict:
     """从指定论文抽取仿真参数，返回 SimParamExtraction JSON 或 extraction_failed。"""
-    client = ArxivClient()
     try:
+        client = ArxivClient()
         paper = client.fetch(arxiv_id)
     except RuntimeError as exc:
         return {"status": "network_unavailable", "error": str(exc)}
+    except Exception as exc:  # noqa: BLE001
+        return {"status": "error", "error": f"获取论文失败：{exc}"}
     if paper is None:
         return {"status": "not_found", "arxiv_id": arxiv_id}
 
-    # 优先读 PDF 前两页（方法/参数集中），失败则退回摘要
+    # 优先读 PDF 前两页（方法/参数集中），失败则退回摘要（记录降级原因）
     text = ""
+    pdf_fallback_reason = ""
     try:
         pdf_path = client.download_pdf(arxiv_id)
         text = read_pdf_pages(str(pdf_path), page_range="1-2", max_chars=6000)["text"]
-    except Exception:  # noqa: BLE001
+    except Exception as exc:  # noqa: BLE001
+        import logging
+
+        logging.getLogger(__name__).warning("PDF 读取失败，退回摘要：%s", exc)
+        pdf_fallback_reason = str(exc)
         text = paper.abstract
     if not text.strip():
         return {"status": "error", "error": "无法获取论文文本"}
 
-    result = extract_sim_params(text, _llm_chat, max_retries=1)
+    try:
+        result = extract_sim_params(text, _llm_chat, max_retries=1)
+    except Exception as exc:  # noqa: BLE001
+        # LLM 基础设施异常（网络/鉴权/超时）与抽取失败区分开
+        return {"status": "llm_unavailable", "error": f"LLM 调用失败：{exc}"}
     if isinstance(result, dict):
         return result  # extraction_failed
     payload = asdict(result)
     payload["status"] = "ok"
     payload["arxiv_id"] = arxiv_id
     payload["title"] = paper.title
+    if pdf_fallback_reason:
+        payload["pdf_fallback"] = pdf_fallback_reason
     return payload
 
 
