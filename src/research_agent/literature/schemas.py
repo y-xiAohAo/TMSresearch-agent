@@ -117,18 +117,50 @@ def validate_payload(data: dict, schema: ExtractionSchema, paper_text: str = "")
     quotes = data.get("evidence_quotes")
     if not isinstance(quotes, dict):
         raise ValueError("evidence_quotes 必须是 dict")
-    # 闸 2：覆盖检查（按 schema.evidence_group_fields）
+    # 闸 2：覆盖检查——只校验 entity dataclass 定义内的字段。
+    # LLM 常超额交付 schema 外字段（notes/turns_per_wing 等），这些进 _extra 不做引句要求。
+    import typing
+    from dataclasses import fields as dc_fields
+
+    hints = typing.get_type_hints(schema.entity)
     for group in schema.evidence_group_fields:
         group_data = data.get(group) or {}
+        group_cls = hints.get(group)
+        known = {f.name for f in dc_fields(group_cls)} if group_cls else set(group_data.keys())
         for field_key, value in group_data.items():
+            if field_key not in known:
+                continue  # schema 外字段不强制引句
             if value is not None and f"{group}.{field_key}" not in quotes:
                 raise ValueError(f"非 null 字段缺少引句：{group}.{field_key}")
-    # 闸 3：引句真实性（压缩空白后子串匹配）
+    # 闸 3：引句真实性（滑动窗口匹配，防纯编造但容忍尾部改写）
     if paper_text:
+        import re as _re
+
+        def _clean_quote(q: str) -> list[str]:
+            q = _re.sub(r"[\(\[]\s*(?:page|p\.|第)\s*\d+\s*(?:页)?\s*[\)\]]", "", str(q), flags=_re.IGNORECASE)
+            parts = _re.split(r"\.{3,}|…", q)
+            return [" ".join(p.split()) for p in parts if p.strip()]
+
+        def _grounded(frag: str) -> bool:
+            words = frag.split()
+            if len(words) < 6:
+                return frag in norm_text
+            window = min(8, len(words))
+            for i in range(0, len(words) - window + 1):
+                if " ".join(words[i:i + window]) in norm_text:
+                    return True
+            return False
+
         norm_text = " ".join(paper_text.split())
+        # 只校验真实抽取字段（evidence_group_fields）的引句；
+        # confidence 等自评/元字段的引句键不强制（LLM 误加时豁免）
+        checkable_prefixes = tuple(schema.evidence_group_fields)
         for field_key, quote in quotes.items():
-            if quote and " ".join(str(quote).split()) not in norm_text:
-                raise ValueError(f"引句非原文子串（疑似编造）：{field_key}")
+            if not quote or not field_key.startswith(checkable_prefixes):
+                continue
+            for frag in _clean_quote(quote):
+                if frag and not _grounded(frag):
+                    raise ValueError(f"引句非原文子串（疑似编造）：{field_key} -> {frag[:60]}")
 
 
 def entity_to_dict(entity: Any) -> dict:

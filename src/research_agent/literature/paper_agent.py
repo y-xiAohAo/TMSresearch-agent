@@ -31,12 +31,26 @@ _SYSTEM_PROMPT = """你是论文结构导航员与参数抽取员。任务：理
 流程建议：
 1. 先 get_outline 看论文骨架，再决定 read_pages 读哪些页（优先方法/实验/仿真章节，摘要引言价值低）。
 2. 最多读约 {max_segments} 个页段；可用 search_text 辅助定位关键词。
-3. 信息足够后用 finish 提交结果 JSON。
+3. 信息足够后用 finish 提交结果。
+
+finish 调用结构（严格遵守，不要嵌套、不要新增顶层键）：
+{{
+  "fields": {{
+    "coil_geometry": {{"type": ..., "radius_m": ..., "position": ...}},
+    "target_field": {{"strength_T": ..., "focal_depth_m": ..., "region": ...}},
+    "simulation": {{"solver": ..., "mesh_cells": ..., "boundary": ...}},
+    "algorithm": {{"name": ..., "pop_size": ..., "n_gen": ..., "objectives": [...]}},
+    "evidence_quotes": {{"<字段路径>": "<原文引句>"}},
+    "confidence": "high|medium|low"
+  }},
+  "confidence": <1-5 整数>,
+  "sufficient": <true/false>
+}}
 
 硬规则：
+- fields 必须直接包含上述六个键（coil_geometry/target_field/simulation/algorithm/evidence_quotes/confidence），不要包在任何其它键（如 simulation_params）里面。
 - 论文未提及的字段填 null，禁止编造。
-- finish 的 JSON 结构：{schema_json}
-- 每个非 null 字段必须在 evidence_quotes 给出原文引句。
+- 每个非 null 字段必须在 evidence_quotes 给出原文引句，evidence_quotes 键不可省略。
 - finish 必须单独调用（不能和其它工具同一轮）。
 - 输出给工具外的任何自由文本都不作数，必须经 finish 提交。"""
 
@@ -228,9 +242,6 @@ class PaperUnderstandingAgent:
         system = _SYSTEM_PROMPT.format(
             focus=focus,
             max_segments=self._cfg.max_page_segments,
-            schema_json=schema.prompt_template.split("<external_document>")[0].split("输出 JSON 结构：")[-1].strip()
-            if "{schema_json}" not in schema.prompt_template
-            else schema.prompt_template.format(text="", schema_json="...").split("<external_document>")[0],
         )
         messages: list[dict] = [
             {"role": "system", "content": system},
@@ -424,12 +435,17 @@ class PaperUnderstandingAgent:
                 continue
             if key not in result or result[key] is None:
                 result[key] = {}
+        # 枚举值归一化：LLM 常给 "figure-of-eight"/"figure of eight" 等变体
+        result = self._normalize_enum_values(result, schema)
         # confidence 双轨：fields 自带 high/medium/low 优先；否则由 envelope 1-5 映射
         if result.get("confidence") not in ("high", "medium", "low"):
             if isinstance(confidence, int):
                 result["confidence"] = {1: "low", 2: "low", 3: "medium", 4: "high", 5: "high"}[confidence]
             else:
                 result["confidence"] = "low"
+
+        # schema 外字段剥离到 _extra（LLM 常超额交付 turns_per_wing/notes 等，保留但不进主结构）
+        result = self._strip_extra_fields(result, schema)
 
         # sufficient=True 时至少要有 1 个组含非 null 字段，否则应报 sufficient=False
         if sufficient:
@@ -453,6 +469,60 @@ class PaperUnderstandingAgent:
         result["_meta"] = {"confidence": confidence, "sufficient": bool(sufficient)}
         verdict = "ok" if sufficient else "insufficient"
         return verdict, "", result
+
+    @staticmethod
+    def _strip_extra_fields(result: dict, schema: ExtractionSchema) -> dict:
+        """把 schema 外的组内字段剥离到 _extra（保留信息但不做引句要求）。"""
+        import typing
+        from dataclasses import fields as dc_fields
+
+        hints = typing.get_type_hints(schema.entity)
+        extra: dict = {}
+        for group in schema.evidence_group_fields:
+            group_data = result.get(group)
+            if not isinstance(group_data, dict):
+                continue
+            group_cls = hints.get(group)
+            known = {f.name for f in dc_fields(group_cls)} if group_cls else set()
+            overflow = {k: v for k, v in group_data.items() if k not in known}
+            if overflow:
+                extra[group] = overflow
+                result[group] = {k: v for k, v in group_data.items() if k in known}
+        # 顶层 schema 外键（如 electrical_params）也归集到 _extra
+        top_known = set(schema.required_top_keys) | {"_meta", "_extra"}
+        top_overflow = {k: result.pop(k) for k in list(result.keys()) if k not in top_known}
+        if top_overflow:
+            extra.update(top_overflow)
+        if extra:
+            result["_extra"] = extra
+        return result
+
+    @staticmethod
+    def _normalize_enum_values(result: dict, schema: ExtractionSchema) -> dict:
+        """归一化枚举字段的常见变体（如 figure-of-eight [coil] → figure8）。"""
+        aliases = {
+            "figure-of-eight": "figure8",
+            "figure of eight": "figure8",
+            "figure-8": "figure8",
+            "figure 8": "figure8",
+            "loop coil": "loop",
+        }
+        for field_path, allowed in schema.type_enum_fields.items():
+            group, _, leaf = field_path.partition(".")
+            group_data = result.get(group)
+            if not isinstance(group_data, dict):
+                continue
+            value = group_data.get(leaf)
+            if isinstance(value, str) and value not in allowed:
+                # 先剥离常见后缀（coil/antenna/绕组），再查别名
+                base = value.strip().lower()
+                for suffix in (" coil", " antenna", " 绕组"):
+                    if base.endswith(suffix):
+                        base = base[: -len(suffix)].strip()
+                normalized = aliases.get(base)
+                if normalized in allowed:
+                    group_data[leaf] = normalized
+        return result
 
     @staticmethod
     def _tool_msg(tc: dict, content: str) -> dict:

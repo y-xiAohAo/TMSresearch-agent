@@ -12,8 +12,13 @@ from research_agent.literature.schemas import PaperAgentConfig
 
 _PAGES = {
     1: "T\nAbstract.",
-    2: "3. Methods\nfigure-8 coil radius 0.05 m, 2cm above head. NSGA2 pop 40 gen 60.",
-    3: "4. Results.",
+    2: "2. Background\nPrior.",
+    3: "3. Methods\nfigure-8 coil radius 0.05 m, 2cm above head. NSGA2 pop 40 gen 60.",
+    4: "3.1 Setup\nCoil positioning.",
+    5: "3.2 Parameters\nWire specs.",
+    6: "3.3 Optimization\nNSGA2 details.",
+    7: "4. Results\nField maps.",
+    8: "5. Conclusion\nSummary.",
 }
 
 _FIELDS_FULL = {
@@ -70,9 +75,9 @@ class SelfCheckGateTests(unittest.TestCase):
     def test_self_check_message_at_turn(self):
         llm = _ScriptedLLM([
             _resp(_assistant(), [_tc("c1", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c2", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c3", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c4", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
+            _resp(_assistant(), [_tc("c2", "read_pages", {"arxiv_id": "x", "start": 3, "end": 3})]),
+            _resp(_assistant(), [_tc("c3", "read_pages", {"arxiv_id": "x", "start": 4, "end": 4})]),
+            _resp(_assistant(), [_tc("c4", "read_pages", {"arxiv_id": "x", "start": 5, "end": 5})]),
             _resp(_assistant(), [_tc("c5", "finish", {"fields": _FIELDS_FULL, "confidence": 4, "sufficient": True})]),
         ])
         agent = PaperUnderstandingAgent(llm_chat=llm, config=PaperAgentConfig(self_check_turn=5, max_turns=8))
@@ -86,10 +91,10 @@ class ClosingTurnTests(unittest.TestCase):
     def test_tools_restricted_to_finish_at_closing_turn(self):
         llm = _ScriptedLLM([
             _resp(_assistant(), [_tc("c1", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c2", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c3", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c4", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
-            _resp(_assistant(), [_tc("c5", "read_pages", {"arxiv_id": "x", "start": 2, "end": 2})]),
+            _resp(_assistant(), [_tc("c2", "read_pages", {"arxiv_id": "x", "start": 3, "end": 3})]),
+            _resp(_assistant(), [_tc("c3", "read_pages", {"arxiv_id": "x", "start": 4, "end": 4})]),
+            _resp(_assistant(), [_tc("c4", "read_pages", {"arxiv_id": "x", "start": 5, "end": 5})]),
+            _resp(_assistant(), [_tc("c5", "read_pages", {"arxiv_id": "x", "start": 6, "end": 6})]),
             _resp(_assistant(), [_tc("c6", "finish", {"fields": _FIELDS_FULL, "confidence": 4, "sufficient": True})]),
         ])
         agent = PaperUnderstandingAgent(llm_chat=llm, config=PaperAgentConfig(closing_turn=6, max_turns=8))
