@@ -240,10 +240,31 @@ class PaperUnderstandingAgent:
         finish_fails = 0
         nudges = 0
         last_err = ""
+        self._self_checked = False
+        self._last_progress = -1
+        self._stall_count = 0
 
         for turn in range(1, self._cfg.max_turns + 1):
             self._turn = turn
-            resp = self._llm(messages, sub_tools)
+
+            # S3a 自检闸：self_check_turn 轮注入一次程序化字段缺口提示
+            if turn == self._cfg.self_check_turn and not self._self_checked:
+                self._self_checked = True
+                gaps = self._field_gaps()
+                messages.append({"role": "user", "content": (
+                    f"[自检] 尚无引句支撑的字段：{gaps}。剩余 {self._cfg.max_turns - turn} 轮，"
+                    "请针对性 read_pages 补，或现在 finish（信息不足可将 sufficient 设为 false）。"
+                )})
+
+            # S3b 轮 closing_turn 起工具集收缩为仅 finish（物理上无法继续收集）
+            allowed_tools = sub_tools if turn < self._cfg.closing_turn else self._finish_only_schema()
+            if turn == self._cfg.closing_turn:
+                messages.append({"role": "user", "content": (
+                    "[收口模式] 已进入收尾阶段：禁止开启新探索（read/search 已禁用），"
+                    "请用已收集的内容立即 finish。"
+                )})
+
+            resp = self._llm(messages, allowed_tools)
             # 修正 P0-1：assistant 消息必须入列
             messages.append(resp.get("message") or {"role": "assistant", "content": resp.get("content", "")})
 
@@ -291,9 +312,55 @@ class PaperUnderstandingAgent:
                     out = self._dispatch(name, args)
                     messages.append(self._tool_msg(tc, out))
 
+        # S3c 强制合成：预算耗尽时用已收集内容强制 best-effort 合成
+        if self._cfg.force_synthesize and self._collected:
+            return self._force_synthesize(messages, schema, started)
         return self._done("incomplete", started, error=f"达到轮次上限 {self._cfg.max_turns}")
 
-    # ---------- 辅助 ----------
+    # ---------- S3 循环控制辅助 ----------
+
+    def _field_gaps(self) -> str:
+        """程序化字段缺口：evidence 组内仍全 null 的字段（自检闸用）。"""
+        if not self._current_schema:
+            return "(未知)"
+        import typing
+
+        hints = typing.get_type_hints(self._current_schema.entity)
+        collected = "\n".join(self._collected)
+        gaps = []
+        for g in self._current_schema.evidence_group_fields:
+            group_cls = hints.get(g)
+            if group_cls is None:
+                continue
+            from dataclasses import fields as dc_fields
+
+            for f in dc_fields(group_cls):
+                if f.name not in collected:
+                    gaps.append(f"{g}.{f.name}")
+        return ", ".join(gaps) if gaps else "(无，全部有线索)"
+
+    def _finish_only_schema(self) -> list[dict]:
+        return [t for t in self._sub_tool_schemas() if t["function"]["name"] == "finish"]
+
+    def _force_synthesize(self, messages: list[dict], schema, started: float) -> dict:
+        """预算耗尽时强制 best-effort 合成（Aviary 教训：截断轨迹不能作废）。"""
+        messages.append({"role": "user", "content": (
+            "预算已耗尽。立即用 finish 提交当前已收集的信息"
+            "（信息不足的字段填 null 并将 sufficient 设为 false），不要调用其它工具。"
+        )})
+        resp = self._llm(messages, self._finish_only_schema())
+        tool_calls = resp.get("tool_calls") or []
+        for tc in tool_calls:
+            if tc["function"]["name"] != "finish":
+                continue
+            try:
+                args = json.loads(tc["function"]["arguments"] or "{}")
+            except json.JSONDecodeError:
+                continue
+            verdict, err, result = self._validate_finish(args, schema)
+            if verdict != "reject":
+                return self._done("best_effort_ok" if verdict == "ok" else verdict, started, result=result)
+        return self._done("insufficient", started, error="强制合成未产出可用结果")
 
     def _dispatch(self, name: str, args: dict) -> str:
         try:
