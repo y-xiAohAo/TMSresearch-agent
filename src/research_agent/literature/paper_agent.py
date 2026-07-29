@@ -277,14 +277,16 @@ class PaperUnderstandingAgent:
                 self._trace.append({"turn": turn, "tool": name, "args": args})
 
                 if name == "finish":
-                    ok, err, result = self._validate_finish(args, schema)
-                    messages.append(self._tool_msg(tc, "accepted" if ok else f"校验失败：{err}"))
-                    if ok:
-                        return self._done("ok", started, result=result)
-                    finish_fails += 1
-                    last_err = err
-                    if finish_fails >= self._cfg.max_finish_fails:
-                        return self._done("extraction_failed", started, error=last_err)
+                    verdict, err, result = self._validate_finish(args, schema)
+                    if verdict == "reject":
+                        messages.append(self._tool_msg(tc, f"校验失败：{err}"))
+                        finish_fails += 1
+                        last_err = err
+                        if finish_fails >= self._cfg.max_finish_fails:
+                            return self._done("extraction_failed", started, error=last_err)
+                    else:
+                        messages.append(self._tool_msg(tc, "accepted"))
+                        return self._done(verdict, started, result=result)
                 else:
                     out = self._dispatch(name, args)
                     messages.append(self._tool_msg(tc, out))
@@ -313,23 +315,60 @@ class PaperUnderstandingAgent:
         except Exception as exc:  # noqa: BLE001
             return f"工具 {name} 执行失败：{exc}"
 
-    def _validate_finish(self, args: dict, schema: ExtractionSchema) -> tuple[bool, str, dict | None]:
-        # finish 的 arguments 是 {"result": {...}} 外壳，校验与返回都取内层 result
-        result = args.get("result", args)
-        if not isinstance(result, dict):
-            return False, "finish 的 result 必须是 JSON 对象", None
-        # 归一化：缺失的参数组补成空组（"缺失组 = 全 null"语义等价，不该判失败）
-        result = dict(result)
+    def _validate_finish(self, args: dict, schema: ExtractionSchema) -> tuple[str, str, dict | None]:
+        """S2 finish 契约校验。返回 (verdict, err, result)。
+
+        finish 新签名：{fields: {...}, confidence: 1-5, sufficient: bool}
+        兼容旧外壳 {"result": {...}}。
+        verdict: "ok" | "insufficient" | "reject"
+        """
+        fields = args.get("fields") or args.get("result") or args
+        if not isinstance(fields, dict):
+            return "reject", "finish 的 fields 必须是 JSON 对象", None
+
+        # 契约字段校验（CORE-Agent 模式：程序化 schema 检查）
+        # envelope confidence 仅来自 args（1-5 自评），不与 fields 内 schema 级 confidence(high/medium/low) 混淆
+        confidence = args.get("confidence")
+        if confidence is not None and (not isinstance(confidence, int) or not (1 <= confidence <= 5)):
+            return "reject", f"confidence 必须是 1-5 的整数，实际 {confidence}", None
+        sufficient = args.get("sufficient", True)
+
+        # 归一化：缺失的参数组补成空组（引句与字段级 confidence 必须真实存在，不补）
+        result = dict(fields)
         for key in schema.required_top_keys:
             if key in ("evidence_quotes", "confidence"):
-                continue  # 引句与置信度必须真实存在，不补
+                continue
             if key not in result or result[key] is None:
                 result[key] = {}
+        # confidence 双轨：fields 自带 high/medium/low 优先；否则由 envelope 1-5 映射
+        if result.get("confidence") not in ("high", "medium", "low"):
+            if isinstance(confidence, int):
+                result["confidence"] = {1: "low", 2: "low", 3: "medium", 4: "high", 5: "high"}[confidence]
+            else:
+                result["confidence"] = "low"
+
+        # sufficient=True 时至少要有 1 个组含非 null 字段，否则应报 sufficient=False
+        if sufficient:
+            has_value = any(
+                isinstance(result.get(g), dict) and any(v is not None for v in result[g].values())
+                for g in schema.evidence_group_fields
+            )
+            if not has_value:
+                return (
+                    "reject",
+                    "sufficient=True 但所有参数字段均为 null。若信息不足，请将 sufficient 设为 false 提交。",
+                    None,
+                )
+
+        # 三道闸（结构/枚举、引句覆盖、引句真实性）
         try:
             validate_payload(result, schema, paper_text=paper_cache.full_text(self._doc.page_texts))
-            return True, "", result
         except ValueError as exc:
-            return False, str(exc), None
+            return "reject", str(exc), None
+
+        result["_meta"] = {"confidence": confidence, "sufficient": bool(sufficient)}
+        verdict = "ok" if sufficient else "insufficient"
+        return verdict, "", result
 
     @staticmethod
     def _tool_msg(tc: dict, content: str) -> dict:
@@ -380,7 +419,13 @@ class PaperUnderstandingAgent:
                ["arxiv_id", "start", "end"]),
             fn("search_text", "全文搜索关键词，返回命中页码",
                {"arxiv_id": pid, "query": {"type": "string"}}, ["arxiv_id", "query"]),
-            fn("finish", "提交最终抽取结果 JSON 并结束（必须单独调用）",
-               {"result": {"type": "object", "description": "按任务 schema 的结果 JSON"}},
-               ["result"]),
+            fn("finish",
+               "提交最终结果并结束（必须单独调用）。fields 为按任务 schema 的参数 JSON；"
+               "confidence 为 1-5 整数自评；信息不足时设 sufficient=false（合法出口）。",
+               {
+                   "fields": {"type": "object", "description": "按任务 schema 的参数 JSON"},
+                   "confidence": {"type": "integer", "minimum": 1, "maximum": 5},
+                   "sufficient": {"type": "boolean", "default": True},
+               },
+               ["fields"]),
         ]
