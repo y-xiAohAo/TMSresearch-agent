@@ -312,6 +312,23 @@ class PaperUnderstandingAgent:
                     out = self._dispatch(name, args)
                     messages.append(self._tool_msg(tc, out))
 
+            # S4 退化检测：连续 max_stall 轮无进度（无新字段线索且无新页）→ 早退强制合成
+            progress = self._filled_fields() * 10 + len(self._pages_read)
+            if progress == self._last_progress:
+                self._stall_count += 1
+            else:
+                self._stall_count = 0
+            self._last_progress = progress
+            if (
+                self._cfg.force_synthesize
+                and self._collected
+                and self._stall_count >= self._cfg.max_stall
+            ):
+                messages.append({"role": "user", "content": (
+                    f"[退化检测] 已连续 {self._stall_count} 轮无新进展。停止探索，立即用已有内容 finish。"
+                )})
+                return self._force_synthesize(messages, schema, started)
+
         # S3c 强制合成：预算耗尽时用已收集内容强制 best-effort 合成
         if self._cfg.force_synthesize and self._collected:
             return self._force_synthesize(messages, schema, started)
