@@ -71,6 +71,50 @@ class PaperUnderstandingAgent:
         self._trace: list[dict] = []
         self._pages_read: set[int] = set()
         self._collected: list[str] = []  # [(page_range, text)] 仅用于上下文与 provenance
+        self._search_count = 0
+        self._turn = 0
+        self._current_schema: ExtractionSchema | None = None
+
+    # ---------- S1 遥测 ----------
+
+    def _filled_fields(self) -> int:
+        """已收集文本中出现非 null 引句字段数的粗估（遥测用，不调 LLM）。"""
+        if not self._collected or not self._current_schema:
+            return 0
+        text = "\n".join(self._collected)
+        filled = 0
+        for group in self._current_schema.evidence_group_fields:
+            for field_key in ("type", "radius_m", "position"):
+                # 粗估：组内字段名在文本中出现即算有线索（仅遥测，不影响逻辑）
+                if field_key in text:
+                    filled += 1
+        return filled
+
+    def _required_count(self) -> int:
+        """evidence 组 dataclass 的字段总数（遥测分母）。"""
+        if not self._current_schema:
+            return 0
+        import typing
+        from dataclasses import fields as dc_fields
+
+        total = 0
+        hints = typing.get_type_hints(self._current_schema.entity)
+        for g in self._current_schema.evidence_group_fields:
+            group_cls = hints.get(g)
+            if group_cls is not None:
+                total += len(dc_fields(group_cls))
+        return total
+
+    def _status_line(self) -> str:
+        filled = self._filled_fields()
+        req = self._required_count()
+        left = max(0, self._cfg.max_turns - self._turn)
+        return (
+            f"\n\n[Status] Fields={filled}/{req} "
+            f"| PagesRead={len(self._pages_read)} "
+            f"| Searches={self._search_count}/{self._cfg.max_searches} "
+            f"| TurnsLeft={left}"
+        )
 
     # ---------- 内部工具 ----------
 
@@ -84,6 +128,15 @@ class PaperUnderstandingAgent:
         end = min(self._doc.pages, int(end))
         if start > end:
             return {"error": f"页码区间非法：{start}-{end}（共 {self._doc.pages} 页）"}
+        # S1 已读去重：请求的页全部已读过时直接提示 finish，不重复占位
+        requested = {p for p in range(start, end + 1) if p in self._doc.page_texts}
+        already = requested & self._pages_read
+        if requested and already == requested:
+            return {
+                "text": f"页 {start}-{end} 已全部读过，无需重读。请用已有内容 finish（或读其它未读页）。",
+                "pages_read": sorted(self._pages_read),
+                "deduplicated": True,
+            }
         texts = []
         for p in range(start, end + 1):
             if p in self._doc.page_texts:
@@ -99,6 +152,13 @@ class PaperUnderstandingAgent:
 
     def _tool_search_text(self, arxiv_id: str, query: str) -> dict:
         self._ensure_doc(arxiv_id)
+        # S1 search 计数：达上限后拒绝并引导收尾
+        if self._search_count >= self._cfg.max_searches:
+            return {
+                "hits": [],
+                "note": f"搜索已达上限({self._cfg.max_searches})。请 read_pages 或用已有内容 finish。",
+            }
+        self._search_count += 1
         q = query.strip().lower()
         if not q:
             return {"hits": []}
@@ -156,6 +216,7 @@ class PaperUnderstandingAgent:
         schema = get_schema(focus)
         if schema is None:
             return {"status": "error", "error": f"unsupported focus: {focus}"}
+        self._current_schema = schema
         try:
             self._ensure_doc(arxiv_id)
         except Exception as exc:
@@ -181,6 +242,7 @@ class PaperUnderstandingAgent:
         last_err = ""
 
         for turn in range(1, self._cfg.max_turns + 1):
+            self._turn = turn
             resp = self._llm(messages, sub_tools)
             # 修正 P0-1：assistant 消息必须入列
             messages.append(resp.get("message") or {"role": "assistant", "content": resp.get("content", "")})
@@ -234,18 +296,20 @@ class PaperUnderstandingAgent:
     def _dispatch(self, name: str, args: dict) -> str:
         try:
             if name == "get_outline":
-                return json.dumps(self._tool_get_outline(args.get("arxiv_id", "")), ensure_ascii=False)
-            if name == "read_pages":
-                return json.dumps(
+                out = json.dumps(self._tool_get_outline(args.get("arxiv_id", "")), ensure_ascii=False)
+            elif name == "read_pages":
+                out = json.dumps(
                     self._tool_read_pages(args.get("arxiv_id", ""), args.get("start", 1), args.get("end", 3)),
                     ensure_ascii=False,
                 )
-            if name == "search_text":
-                return json.dumps(
+            elif name == "search_text":
+                out = json.dumps(
                     self._tool_search_text(args.get("arxiv_id", ""), args.get("query", "")),
                     ensure_ascii=False,
                 )
-            return f"未知工具：{name}"
+            else:
+                out = f"未知工具：{name}"
+            return out + self._status_line()  # S1：统一追加状态遥测行
         except Exception as exc:  # noqa: BLE001
             return f"工具 {name} 执行失败：{exc}"
 

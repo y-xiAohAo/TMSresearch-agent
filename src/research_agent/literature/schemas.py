@@ -26,6 +26,11 @@ class PaperAgentConfig:
     collected_cap_chars: int = 22000  # ≥ 3×6000 + outline 余量（修正 P0-3 算术矛盾）
     model: str = ""                  # 空 = 回退 SETTINGS.chat_model
     cache_dir: str = ""              # 空 = SETTINGS.artifacts_dir/paper_cache
+    max_searches: int = 4            # search_text 上限（防 search 成瘾）
+    self_check_turn: int = 5         # 自检闸触发轮
+    closing_turn: int = 6            # 轮次≥此值时工具集收缩为仅 finish
+    force_synthesize: bool = True    # 预算耗尽时强制 best-effort 合成
+    max_stall: int = 2               # 连续无进展轮数上限（S4 退化检测）
 
     @property
     def max_page_segments(self) -> int:
