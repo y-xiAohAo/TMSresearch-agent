@@ -127,9 +127,45 @@ def _param_to_dict(p: ParamSpec) -> dict:
     return d
 
 
+# s4l_v1.model 的 14 个 Create 原语（从 XCoreModeling docstring dump，2026-07-30 实测）
+_S4L_SIGNATURES = {
+    "CreatePoint": "position",
+    "CreatePolyLine": "points",
+    "CreateSpline": "points",
+    "CreateArc": "center, radius, start, end",
+    "CreateRectangle": "origin, dx, dy",
+    "CreateCircle": "center, normal, radius",
+    "CreateSolidCylinder": "point1, point2, radius, parametrized=False",
+    "CreateSolidTube": "base_center, axis_height, major_radius, minor_radius, parametrized=False",
+    "CreateSolidSphere": "center_point, radius",
+    "CreateSolidBlock": "p0, p1, parametrized=False",
+    "CreateSolidCone": "bottom_center, top_center, bottom_radius, top_radius, parametrized=False",
+    "CreateSolidPyramid": "bottom_center, top_center, bottom_radius, top_radius, number_of_sides, start_angle, parametrized=False",
+    "CreateWireBlock": "p0, p1, parametrized=False",
+    "CreateGroup": "name='Group'",
+}
+
+
 def introspect_s4l() -> dict:
-    """用 AST 从 s4l 脚本提取 model.Create* 调用的关键字参数（正则处理不了嵌套括号）。"""
+    """s4l 原语：14 个 Create 签名（docstring dump）+ 脚本提取的补充。"""
     prims: dict[str, dict] = {}
+    for name, sig in _S4L_SIGNATURES.items():
+        params = []
+        for part in [p.strip() for p in sig.split(",")]:
+            pname = part.split("=")[0].strip()
+            has_default = "=" in part
+            ptype = "vec3" if any(k in pname for k in ("center", "origin", "point", "normal", "p0", "p1", "bottom", "top")) else "quantity"
+            params.append({
+                "name": pname, "type": ptype,
+                "required": not has_default,
+                **({"default": part.split("=", 1)[1].strip()} if has_default else {}),
+            })
+        prims[name] = {
+            "params": params,
+            "source": "s4l_v1.model/XCoreModeling_docstring",
+            "value_style": "tuple_units",
+        }
+    # 脚本提取的补充（CreateWireBlock/CreateVoxels/CreatePoint 等脚本实证参数）
     for script in _S4L.rglob("*.py"):
         try:
             tree = ast.parse(script.read_text(encoding="utf-8", errors="ignore"))
@@ -142,18 +178,20 @@ def introspect_s4l() -> dict:
             name = None
             if isinstance(func, ast.Attribute) and func.attr.startswith("Create"):
                 name = func.attr
-            if not name or name in prims:
+            if not name:
                 continue
-            kws = sorted({kw.arg for kw in node.keywords if kw.arg})
-            params = [
-                {"name": k, "type": "quantity", "required": False}
-                for k in kws if k != "parametrized"
-            ]
-            prims[name] = {
-                "params": params,
-                "source": f"s4l_script/{script.name}",
-                "value_style": "tuple_units",
-            }
+            kws = sorted({kw.arg for kw in node.keywords if kw.arg and kw.arg != "parametrized"})
+            if name in prims:
+                existing = {p["name"] for p in prims[name]["params"]}
+                for k in kws:
+                    if k not in existing:
+                        prims[name]["params"].append({"name": k, "type": "quantity", "required": False})
+            else:
+                prims[name] = {
+                    "params": [{"name": k, "type": "quantity", "required": False} for k in kws],
+                    "source": f"s4l_script/{script.name}",
+                    "value_style": "tuple_units",
+                }
     return prims
 
 
@@ -195,14 +233,71 @@ def build_device_templates() -> dict:
     }
 
 
-def main(out_dir: Path | None = None) -> dict:
+# Antenna Toolkit 天线的字段→单位/类型推断规则
+_LENGTH_FIELDS = {
+    "length", "width", "height", "radius", "diameter", "thickness", "depth",
+    "size", "span", "aperture", "flare", "arm", "element", "feeder_length",
+    "substrate_height", "patch_length", "patch_width", "wing_diameter",
+    "loop_radius", "wire_diameter", "strip_width", "slot_length", "slot_width",
+}
+_FREQ_FIELDS = {"frequency", "center_frequency", "resonant_frequency", "start_frequency", "stop_frequency"}
+_INT_HINT = ("number", "turns", "count", "sides", "elements", "segments", "points", "mode", "order")
+
+
+def _infer_field(name: str, default) -> dict:
+    """按字段名与默认值推断单位/类型（对齐 Antenna Toolkit 语义）。"""
+    lname = name.lower()
+    if lname in ("name", "material", "coordinate_system", "outer_boundary"):
+        return {"name": name, "type": "string"}
+    if lname == "length_unit":
+        return {"name": name, "type": "enum", "enum_options": ["mm", "um", "cm", "meter", "mil", "in"], "default": "mm"}
+    if lname == "frequency_unit":
+        return {"name": name, "type": "enum", "enum_options": ["Hz", "kHz", "MHz", "GHz"], "default": "GHz"}
+    if lname in _FREQ_FIELDS or "frequency" in lname:
+        return {"name": name, "type": "quantity", "unit": "Hz"}
+    if lname == "origin" or (isinstance(default, list) and len(default) == 3):
+        return {"name": name, "type": "vec3", "unit": "m"}
+    if lname == "material_properties" or isinstance(default, dict):
+        return {"name": name, "type": "dict"}
+    if any(h in lname for h in _INT_HINT) or isinstance(default, int):
+        return {"name": name, "type": "int"}
+    if any(h in lname for h in _LENGTH_FIELDS) or isinstance(default, float):
+        return {"name": name, "type": "quantity", "unit": "m"}
+    return {"name": name, "type": "quantity"}
+
+
+def build_antenna_toolkit_templates(antenna_fields: dict) -> dict:
+    """把 Antenna Toolkit 各天线的字段集批量转为设备模板。"""
+    templates = {}
+    for antenna, fields in antenna_fields.items():
+        tf = []
+        for fname in fields:
+            spec = _infer_field(fname, None)
+            # 关键必填：frequency 与主几何字段
+            if fname == "frequency" or fname in ("dipole_length", "patch_length", "wing_diameter", "substrate_height"):
+                spec["required"] = True
+            tf.append(spec)
+        templates[antenna] = {
+            "fields": tf,
+            "source": "ansys-antenna-toolkit/_default_input_parameters",
+        }
+    return templates
+
+
+def main(out_dir: Path | None = None, antenna_fields: dict | None = None) -> dict:
     out_dir = out_dir or (Path(__file__).resolve().parent / "vocab")
     out_dir.mkdir(parents=True, exist_ok=True)
 
     prims_pyaedt = introspect_pyaedt()
     prims_s4l = introspect_s4l()
     prims = {**prims_pyaedt, **{f"s4l_{k}": v for k, v in prims_s4l.items()}}
+
+    # 设备模板：手维护的优先（dipole/patch/tms_figure8 为抽取精选），
+    # Antenna Toolkit 批量只补缺、不覆盖（toolkit 的 dipole/patch 是阵列变体，不适合抽取）
     templates = build_device_templates()
+    if antenna_fields:
+        for name, spec in build_antenna_toolkit_templates(antenna_fields).items():
+            templates.setdefault(name, spec)
 
     (out_dir / "primitives.json").write_text(
         json.dumps(prims, indent=2, ensure_ascii=False), encoding="utf-8"
@@ -211,7 +306,7 @@ def main(out_dir: Path | None = None) -> dict:
         json.dumps(templates, indent=2, ensure_ascii=False), encoding="utf-8"
     )
     print(f"primitives: {len(prims)} (pyaedt {len(prims_pyaedt)}, s4l {len(prims_s4l)})")
-    print(f"device_templates: {list(templates.keys())}")
+    print(f"device_templates: {len(templates)} -> {list(templates.keys())}")
     print(f"out: {out_dir}")
     return {"primitives": prims, "device_templates": templates}
 

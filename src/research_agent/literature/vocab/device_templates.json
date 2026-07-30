@@ -104,5 +104,912 @@
       }
     ],
     "source": "tms_literature/s4l_coil_params"
+  },
+  "bowtie": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "conical_spiral": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "start_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "stop_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "helix": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "direction",
+        "type": "quantity"
+      },
+      {
+        "name": "feeder_length",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "gain",
+        "type": "quantity"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "horn": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "log_periodic": {
+    "fields": [
+      {
+        "name": "__parse_error__",
+        "type": "quantity"
+      },
+      {
+        "name": "base_element_length",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "base_element_radius",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "beta_angle",
+        "type": "quantity"
+      },
+      {
+        "name": "boom_spacing",
+        "type": "quantity"
+      },
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "delta_angle",
+        "type": "quantity"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "gain",
+        "type": "quantity"
+      },
+      {
+        "name": "input_resistance",
+        "type": "quantity"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "load_impedance",
+        "type": "quantity"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "num_sides",
+        "type": "int"
+      },
+      {
+        "name": "number_of_elements",
+        "type": "int"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "sigma_ratio",
+        "type": "quantity"
+      },
+      {
+        "name": "start_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "stop_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      },
+      {
+        "name": "tau_ratio",
+        "type": "quantity"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "monopole": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "pifa": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "planar_spiral": {
+    "fields": [
+      {
+        "name": "__parse_error__",
+        "type": "quantity"
+      },
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "start_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "stop_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "slot": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "vivaldi": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "feeder_length",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "start_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "stop_frequency",
+        "type": "quantity",
+        "unit": "Hz"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "waveguide": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "inset_from_feed",
+        "type": "quantity"
+      },
+      {
+        "name": "inset_from_termination",
+        "type": "quantity"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "slot_length",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "slot_offset",
+        "type": "quantity"
+      },
+      {
+        "name": "slot_spacing",
+        "type": "quantity"
+      },
+      {
+        "name": "slot_width",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "slots_number",
+        "type": "int"
+      },
+      {
+        "name": "wall_thickness",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "wg_height",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "wg_length",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "wg_radius",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "wg_standard",
+        "type": "quantity"
+      },
+      {
+        "name": "wg_width",
+        "type": "quantity",
+        "unit": "m"
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "yagiuda": {
+    "fields": [
+      {
+        "name": "coordinate_system",
+        "type": "string"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      },
+      {
+        "name": "frequency_unit",
+        "type": "enum",
+        "enum_options": [
+          "Hz",
+          "kHz",
+          "MHz",
+          "GHz"
+        ],
+        "default": "GHz"
+      },
+      {
+        "name": "gain",
+        "type": "quantity"
+      },
+      {
+        "name": "length_unit",
+        "type": "enum",
+        "enum_options": [
+          "mm",
+          "um",
+          "cm",
+          "meter",
+          "mil",
+          "in"
+        ],
+        "default": "mm"
+      },
+      {
+        "name": "material",
+        "type": "string"
+      },
+      {
+        "name": "material_properties",
+        "type": "dict"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "origin",
+        "type": "vec3",
+        "unit": "m"
+      },
+      {
+        "name": "outer_boundary",
+        "type": "string"
+      },
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
   }
 }

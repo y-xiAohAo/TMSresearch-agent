@@ -1499,30 +1499,315 @@
     "source": "pyaedt/primitives.py",
     "doc_first_line": "Create a user-defined primitive (UDP)."
   },
+  "s4l_CreatePoint": {
+    "params": [
+      {
+        "name": "position",
+        "type": "quantity",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreatePolyLine": {
+    "params": [
+      {
+        "name": "points",
+        "type": "vec3",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSpline": {
+    "params": [
+      {
+        "name": "points",
+        "type": "vec3",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateArc": {
+    "params": [
+      {
+        "name": "center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "start",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "end",
+        "type": "quantity",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateRectangle": {
+    "params": [
+      {
+        "name": "origin",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "dx",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "dy",
+        "type": "quantity",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateCircle": {
+    "params": [
+      {
+        "name": "center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "normal",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidCylinder": {
+    "params": [
+      {
+        "name": "point1",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "point2",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "parametrized",
+        "type": "quantity",
+        "required": false,
+        "default": "False"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidTube": {
+    "params": [
+      {
+        "name": "base_center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "axis_height",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "major_radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "minor_radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "parametrized",
+        "type": "quantity",
+        "required": false,
+        "default": "False"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidSphere": {
+    "params": [
+      {
+        "name": "center_point",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidBlock": {
+    "params": [
+      {
+        "name": "p0",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "p1",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "parametrized",
+        "type": "quantity",
+        "required": false,
+        "default": "False"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidCone": {
+    "params": [
+      {
+        "name": "bottom_center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "top_center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "bottom_radius",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "top_radius",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "parametrized",
+        "type": "quantity",
+        "required": false,
+        "default": "False"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateSolidPyramid": {
+    "params": [
+      {
+        "name": "bottom_center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "top_center",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "bottom_radius",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "top_radius",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "number_of_sides",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "start_angle",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "parametrized",
+        "type": "quantity",
+        "required": false,
+        "default": "False"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
   "s4l_CreateWireBlock": {
     "params": [
       {
         "name": "p0",
-        "type": "quantity",
-        "required": false
+        "type": "vec3",
+        "required": true
       },
       {
         "name": "p1",
+        "type": "vec3",
+        "required": true
+      },
+      {
+        "name": "parametrized",
         "type": "quantity",
-        "required": false
+        "required": false,
+        "default": "False"
       }
     ],
-    "source": "s4l_script/s4l_tutorial.py",
+    "source": "s4l_v1.model/XCoreModeling_docstring",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateGroup": {
+    "params": [
+      {
+        "name": "name",
+        "type": "quantity",
+        "required": false,
+        "default": "'Group'"
+      }
+    ],
+    "source": "s4l_v1.model/XCoreModeling_docstring",
     "value_style": "tuple_units"
   },
   "s4l_CreateVoxels": {
     "params": [],
     "source": "s4l_script/s4l_tutorial.py",
-    "value_style": "tuple_units"
-  },
-  "s4l_CreatePoint": {
-    "params": [],
-    "source": "s4l_script/computeWorstOrientation.py",
     "value_style": "tuple_units"
   }
 }
