@@ -1,0 +1,1528 @@
+{
+  "create_box": {
+    "params": [
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "sizes",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a box."
+  },
+  "create_cylinder": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "enum",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "height",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "num_sides",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a cylinder."
+  },
+  "create_polyhedron": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "int",
+        "required": false
+      },
+      {
+        "name": "center",
+        "type": "vec",
+        "required": false,
+        "default": [
+          0.0,
+          0.0,
+          0.0
+        ]
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": false,
+        "default": [
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      {
+        "name": "height",
+        "type": "quantity",
+        "required": false,
+        "default": 1.0
+      },
+      {
+        "name": "num_sides",
+        "type": "int",
+        "required": false,
+        "default": 12
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a regular polyhedron."
+  },
+  "create_cone": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "bottom_radius",
+        "type": "quantity",
+        "required": false
+      },
+      {
+        "name": "top_radius",
+        "type": "quantity",
+        "required": false
+      },
+      {
+        "name": "height",
+        "type": "quantity",
+        "required": false
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a cone."
+  },
+  "create_sphere": {
+    "params": [
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a sphere."
+  },
+  "create_torus": {
+    "params": [
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "major_radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "minor_radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "axis",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "mytorus",
+          "copper"
+        ]
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a torus."
+  },
+  "create_bondwire": {
+    "params": [
+      {
+        "name": "start",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "end",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "h1",
+        "type": "quantity",
+        "required": false,
+        "default": 0.2
+      },
+      {
+        "name": "h2",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "alpha",
+        "type": "int",
+        "required": false,
+        "default": 80
+      },
+      {
+        "name": "beta",
+        "type": "int",
+        "required": false,
+        "default": 5
+      },
+      {
+        "name": "bond_type",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "diameter",
+        "type": "quantity",
+        "required": false,
+        "default": 0.025
+      },
+      {
+        "name": "facets",
+        "type": "int",
+        "required": false,
+        "default": 6
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "orientation",
+        "type": "string",
+        "required": false,
+        "default": "Z",
+        "enum_options": [
+          "Z"
+        ]
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a bondwire."
+  },
+  "create_rectangle": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "enum",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "sizes",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "is_covered",
+        "type": "bool",
+        "required": false,
+        "default": true
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a rectangle."
+  },
+  "create_circle": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "enum",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "num_sides",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "is_covered",
+        "type": "bool",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "non_model",
+        "type": "bool",
+        "required": false,
+        "default": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a circle."
+  },
+  "create_ellipse": {
+    "params": [
+      {
+        "name": "orientation",
+        "type": "enum",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "major_radius",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "ratio",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "is_covered",
+        "type": "bool",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "segments",
+        "type": "int",
+        "required": false,
+        "default": 0
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create an ellipse."
+  },
+  "create_equationbased_curve": {
+    "params": [
+      {
+        "name": "x_t",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "y_t",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "z_t",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "t_start",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "t_end",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "num_points",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "xsection_type",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "Line",
+          "Circle",
+          "Rectangle",
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_orient",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "X",
+          "Y",
+          "Z",
+          "Auto"
+        ]
+      },
+      {
+        "name": "xsection_width",
+        "type": "quantity",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "xsection_topwidth",
+        "type": "quantity",
+        "required": false,
+        "default": 1,
+        "enum_options": [
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_height",
+        "type": "quantity",
+        "required": false,
+        "default": 1,
+        "enum_options": [
+          "Rectangle"
+        ]
+      },
+      {
+        "name": "xsection_num_seg",
+        "type": "int",
+        "required": false,
+        "default": 0,
+        "enum_options": [
+          "Circle",
+          "Rectangle",
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_bend_type",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "Corner",
+          "Circle",
+          "Curved"
+        ]
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create an equation-based curve."
+  },
+  "create_equationbased_surface": {
+    "params": [
+      {
+        "name": "x_uv",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "y_uv",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "z_uv",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "u_start",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "u_end",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "v_start",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "v_end",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create an equation-based surface."
+  },
+  "create_helix": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "x_start_dir",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "y_start_dir",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "z_start_dir",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "turns",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "right_hand",
+        "type": "bool",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "radius_increment",
+        "type": "quantity",
+        "required": false,
+        "default": 0.0
+      },
+      {
+        "name": "thread",
+        "type": "int",
+        "required": false,
+        "default": 1
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a helix from a polyline."
+  },
+  "create_udm": {
+    "params": [
+      {
+        "name": "udm_full_name",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "parameters",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "library",
+        "type": "string",
+        "required": false,
+        "default": "syslib",
+        "enum_options": [
+          "syslib"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a user-defined model."
+  },
+  "create_spiral": {
+    "params": [
+      {
+        "name": "internal_radius",
+        "type": "int",
+        "required": false,
+        "default": 10
+      },
+      {
+        "name": "spacing",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "faces",
+        "type": "int",
+        "required": false,
+        "default": 8
+      },
+      {
+        "name": "turns",
+        "type": "int",
+        "required": false,
+        "default": 10
+      },
+      {
+        "name": "width",
+        "type": "int",
+        "required": false,
+        "default": 2
+      },
+      {
+        "name": "thickness",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "elevation",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false,
+        "default": "copper"
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a spiral inductor from a polyline."
+  },
+  "create_choke": {
+    "params": [
+      {
+        "name": "input_file",
+        "type": "string",
+        "required": true
+      }
+    ],
+    "source": "pyaedt/primitives_3d.py",
+    "doc_first_line": "Create a choke from a JSON setting file."
+  },
+  "create_coordinate_system": {
+    "params": [
+      {
+        "name": "origin",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "reference_cs",
+        "type": "string",
+        "required": false,
+        "default": "Global",
+        "enum_options": [
+          "Global"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "mode",
+        "type": "string",
+        "required": false,
+        "default": "axis",
+        "enum_options": [
+          "axis",
+          "axisrotation",
+          "view",
+          "zxz",
+          "zyz"
+        ]
+      },
+      {
+        "name": "view",
+        "type": "string",
+        "required": false,
+        "default": "iso",
+        "enum_options": [
+          "iso",
+          "XY",
+          "XZ",
+          "rotate"
+        ]
+      },
+      {
+        "name": "x_pointing",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "y_pointing",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "psi",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "theta",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "phi",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "u",
+        "type": "vec",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a coordinate system."
+  },
+  "create_face_coordinate_system": {
+    "params": [
+      {
+        "name": "face",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "axis_position",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "axis",
+        "type": "string",
+        "required": false,
+        "default": "X",
+        "enum_options": [
+          "X",
+          "Y"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "offset",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "rotation",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "always_move_to_end",
+        "type": "bool",
+        "required": false,
+        "default": true
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a face coordinate system."
+  },
+  "create_object_coordinate_system": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "origin",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "x_axis",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "y_axis",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "move_to_end",
+        "type": "bool",
+        "required": false,
+        "default": true
+      },
+      {
+        "name": "reverse_x_axis",
+        "type": "bool",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "reverse_y_axis",
+        "type": "bool",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an object coordinate system."
+  },
+  "create_sheet_to_ground": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "ground_name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "orientation",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "sheet_dim",
+        "type": "int",
+        "required": false,
+        "default": 1
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a sheet between an object and a ground plane."
+  },
+  "create_airbox": {
+    "params": [
+      {
+        "name": "offset",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "offset_type",
+        "type": "string",
+        "required": false,
+        "default": "Absolute",
+        "enum_options": [
+          "Absolute",
+          "Relative"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false,
+        "default": "AirBox_Auto",
+        "enum_options": [
+          "AirBox_Auto"
+        ]
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an airbox that is as big as the bounding extension of the project."
+  },
+  "create_air_region": {
+    "params": [
+      {
+        "name": "x_pos",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "y_pos",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "z_pos",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "x_neg",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "y_neg",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "z_neg",
+        "type": "int",
+        "required": false,
+        "default": 0
+      },
+      {
+        "name": "is_percentage",
+        "type": "bool",
+        "required": false,
+        "default": true
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an air region."
+  },
+  "create_face_list": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a list of faces given a list of face ID or a list of objects."
+  },
+  "create_object_list": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an object list given a list of object names."
+  },
+  "create_faceted_bondwire_from_true_surface": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "direction",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "min_size",
+        "type": "quantity",
+        "required": false,
+        "default": 0.2
+      },
+      {
+        "name": "number_of_segments",
+        "type": "int",
+        "required": false,
+        "default": 8
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a faceted bondwire from an existing true surface bondwire."
+  },
+  "create_outer_facelist": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false,
+        "default": "outer_faces",
+        "enum_options": [
+          "outer_faces"
+        ]
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a face list from a list of outer objects."
+  },
+  "create_group": {
+    "params": [
+      {
+        "name": "objects",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "components",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "groups",
+        "type": "vec",
+        "required": false
+      },
+      {
+        "name": "group_name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Group objects or groups into one group."
+  },
+  "create_point": {
+    "params": [
+      {
+        "name": "position",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "color",
+        "type": "string",
+        "required": false,
+        "default": "(143 175 143)"
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a point."
+  },
+  "create_plane": {
+    "params": [
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "plane_base_x",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "plane_base_y",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "plane_base_z",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "plane_normal_x",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "plane_normal_y",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "plane_normal_z",
+        "type": "string",
+        "required": false,
+        "default": "0mm"
+      },
+      {
+        "name": "color",
+        "type": "string",
+        "required": false,
+        "default": "(143 175 143)"
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a plane."
+  },
+  "create_subregion": {
+    "params": [
+      {
+        "name": "padding_values",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "padding_types",
+        "type": "string",
+        "required": true,
+        "enum_options": [
+          "Percentage Offset",
+          "Absolute Offset",
+          "Absolute Position",
+          "Transverse Percentage Offset"
+        ]
+      },
+      {
+        "name": "assignment",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a subregion."
+  },
+  "create_region": {
+    "params": [
+      {
+        "name": "pad_value",
+        "type": "quantity",
+        "required": false,
+        "default": 300
+      },
+      {
+        "name": "pad_type",
+        "type": "string",
+        "required": false,
+        "default": "Percentage Offset",
+        "enum_options": [
+          "Percentage Offset",
+          "Absolute Offset",
+          "Absolute Position",
+          "Transverse Percentage Offset"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false,
+        "default": "Region"
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an air region."
+  },
+  "create_object_from_edge": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "non_model",
+        "type": "bool",
+        "required": false,
+        "default": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an object from one or multiple edges."
+  },
+  "create_object_from_face": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "non_model",
+        "type": "bool",
+        "required": false,
+        "default": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create an object from one or multiple face."
+  },
+  "create_polyline": {
+    "params": [
+      {
+        "name": "points",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "segment_type",
+        "type": "vec",
+        "required": false,
+        "enum_options": [
+          "Line",
+          "PolylineSegment",
+          "Arc",
+          "Spline",
+          "AngularArc"
+        ]
+      },
+      {
+        "name": "cover_surface",
+        "type": "bool",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "close_surface",
+        "type": "bool",
+        "required": false,
+        "default": false
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "material",
+        "type": "string",
+        "required": false
+      },
+      {
+        "name": "xsection_type",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "Line",
+          "Circle",
+          "Rectangle",
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_orient",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "X",
+          "Y",
+          "Z",
+          "Auto"
+        ]
+      },
+      {
+        "name": "xsection_width",
+        "type": "int",
+        "required": false,
+        "default": 1
+      },
+      {
+        "name": "xsection_topwidth",
+        "type": "int",
+        "required": false,
+        "default": 1,
+        "enum_options": [
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_height",
+        "type": "int",
+        "required": false,
+        "default": 1,
+        "enum_options": [
+          "Rectangle"
+        ]
+      },
+      {
+        "name": "xsection_num_seg",
+        "type": "int",
+        "required": false,
+        "default": 0,
+        "enum_options": [
+          "Circle",
+          "Rectangle",
+          "Isosceles Trapezoid"
+        ]
+      },
+      {
+        "name": "xsection_bend_type",
+        "type": "string",
+        "required": false,
+        "enum_options": [
+          "Corner",
+          "Circle",
+          "Curved"
+        ]
+      },
+      {
+        "name": "non_model",
+        "type": "bool",
+        "required": false,
+        "default": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Draw a polyline object in the 3D modeler."
+  },
+  "create_spiral_on_face": {
+    "params": [
+      {
+        "name": "assignment",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "width",
+        "type": "quantity",
+        "required": true
+      },
+      {
+        "name": "filling_factor",
+        "type": "quantity",
+        "required": false,
+        "default": 1.5
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a Spiral Polyline inside a face."
+  },
+  "create_udp": {
+    "params": [
+      {
+        "name": "dll",
+        "type": "string",
+        "required": true
+      },
+      {
+        "name": "parameters",
+        "type": "vec",
+        "required": true
+      },
+      {
+        "name": "library",
+        "type": "string",
+        "required": false,
+        "default": "syslib",
+        "enum_options": [
+          "syslib"
+        ]
+      },
+      {
+        "name": "name",
+        "type": "string",
+        "required": false
+      }
+    ],
+    "source": "pyaedt/primitives.py",
+    "doc_first_line": "Create a user-defined primitive (UDP)."
+  },
+  "s4l_CreateWireBlock": {
+    "params": [
+      {
+        "name": "p0",
+        "type": "quantity",
+        "required": false
+      },
+      {
+        "name": "p1",
+        "type": "quantity",
+        "required": false
+      }
+    ],
+    "source": "s4l_script/s4l_tutorial.py",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreateVoxels": {
+    "params": [],
+    "source": "s4l_script/s4l_tutorial.py",
+    "value_style": "tuple_units"
+  },
+  "s4l_CreatePoint": {
+    "params": [],
+    "source": "s4l_script/computeWorstOrientation.py",
+    "value_style": "tuple_units"
+  }
+}

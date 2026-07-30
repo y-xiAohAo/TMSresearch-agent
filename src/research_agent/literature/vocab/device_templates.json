@@ -1,0 +1,108 @@
+{
+  "dipole": {
+    "fields": [
+      {
+        "name": "dipole_length",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      },
+      {
+        "name": "arm_radius",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "gap",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      }
+    ],
+    "source": "hfss.get_component_variables(Dipole_Antenna)"
+  },
+  "patch": {
+    "fields": [
+      {
+        "name": "substrate_height",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      },
+      {
+        "name": "substrate_permittivity",
+        "type": "float"
+      },
+      {
+        "name": "patch_length",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      },
+      {
+        "name": "patch_width",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "feed_position_offset",
+        "type": "quantity"
+      },
+      {
+        "name": "frequency",
+        "type": "quantity",
+        "unit": "Hz",
+        "required": true
+      }
+    ],
+    "source": "ansys-antenna-toolkit/_default_input_parameters"
+  },
+  "tms_figure8": {
+    "fields": [
+      {
+        "name": "wing_diameter",
+        "type": "quantity",
+        "unit": "m",
+        "required": true
+      },
+      {
+        "name": "turns_per_wing",
+        "type": "int",
+        "required": true
+      },
+      {
+        "name": "wire_diameter",
+        "type": "quantity",
+        "unit": "m"
+      },
+      {
+        "name": "wing_angle_deg",
+        "type": "float"
+      },
+      {
+        "name": "I_peak",
+        "type": "quantity",
+        "unit": "A"
+      },
+      {
+        "name": "dI_dt",
+        "type": "quantity",
+        "unit": "A/s"
+      },
+      {
+        "name": "pulse_waveform",
+        "type": "enum",
+        "enum_options": [
+          "monophasic",
+          "biphasic"
+        ]
+      }
+    ],
+    "source": "tms_literature/s4l_coil_params"
+  }
+}
