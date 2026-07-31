@@ -77,3 +77,4 @@ def list_compilers() -> list[str]:
 # 触发内置 synthesis/compiler 的装饰器注册（import 副作用）
 from research_agent.literature.synthesis import tms_figure8 as _tms_figure8  # noqa: F401,E402
 from research_agent.literature.synthesis import tms_optimize_compiler as _tms_compiler  # noqa: F401,E402
+from research_agent.literature.synthesis import s4l_compiler as _s4l_compiler  # noqa: F401,E402

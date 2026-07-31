@@ -36,7 +36,12 @@ def figure8_synthesis(params: SimulationParams) -> BackendTask:
     if wing_d is not None:
         geometry = {
             "kind": "coil_sphere",
-            "params": {"radius": float(wing_d) / 2.0},
+            "params": {
+                "radius": float(wing_d) / 2.0,
+                # 供建模类后端（sim4life）使用的显式翼参数（tms_optimize 忽略它们）
+                "wing_diameter": float(wing_d),
+                "turns_per_wing": int(turns) if turns is not None else None,
+            },
         }
         approximations.append("近似1: figure8 翼形半径≈绕组球面半径（coil_sphere.radius=wing_diameter/2）")
     if focal_depth is not None:

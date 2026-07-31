@@ -86,24 +86,42 @@ def _s4l_run_script(
         raise FileNotFoundError(f"脚本不存在：{script_path}")
 
     started = time.perf_counter()
-    proc = subprocess.run(
+    proc = subprocess.Popen(
         [SETTINGS.s4l_python, str(script)],
         cwd=SETTINGS.s4l_home,
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
-        timeout=max(10, int(timeout_s)),
         encoding="utf-8",
         errors="replace",
     )
+    timed_out = False
+    try:
+        stdout, stderr = proc.communicate(timeout=max(10, int(timeout_s)))
+    except subprocess.TimeoutExpired:
+        # Windows 坑：kill 父进程后孙进程（S4L 内核）仍持有管道，
+        # communicate() 会无限等 EOF——必须 taskkill /T 杀整棵进程树。
+        timed_out = True
+        try:
+            subprocess.run(
+                ["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                capture_output=True, timeout=30,
+            )
+        except Exception:
+            proc.kill()
+        try:
+            stdout, stderr = proc.communicate(timeout=30)
+        except subprocess.TimeoutExpired:
+            stdout, stderr = "", "killed: process tree terminated, pipes abandoned"
     duration = round(time.perf_counter() - started, 2)
 
     artifacts: list[str] = []
     if artifacts_glob:
         artifacts = sorted(str(p) for p in Path().glob(artifacts_glob))
     return {
-        "stdout": proc.stdout[-4000:] if proc.stdout else "",
-        "stderr": proc.stderr[-2000:] if proc.stderr else "",
-        "exit_code": proc.returncode,
+        "stdout": (stdout or "")[-4000:],
+        "stderr": ((stderr or "") + ("\nTIMEOUT: killed process tree" if timed_out else ""))[-2000:],
+        "exit_code": -9 if timed_out else proc.returncode,
         "duration_s": duration,
         "artifacts": artifacts,
     }
