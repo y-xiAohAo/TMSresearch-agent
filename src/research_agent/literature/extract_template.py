@@ -122,21 +122,35 @@ _SECTION_HINT_RE = re.compile(
 )
 
 
-def _select_param_dense_text(text: str, budget: int = 12000) -> str:
+def _select_param_dense_text(text: str, budget: int = 3000, template_fields: list[dict] | None = None) -> str:
     """选参数最密集的文本区（而非硬截前 N 字符）。
 
     按 2000 字符块扫描，按"数字+单位/参数字"与"方法/几何关键词"打分，
     累加高分块至预算，保持原文顺序拼接。
+    若提供 template_fields，额外按模板字段名做关键词命中加权（模板感知选区）。
+    注：budget 默认 3000——实测 DeepSeek flash 在 ~4000+ 字符 prompt 下
+    会间歇返回空响应，3000 以下稳定。
     """
     if len(text) <= budget:
         return text
+    # 模板字段关键词（如 wing_diameter, turns_per_wing, AWG, coil）
+    field_words: list[str] = []
+    if template_fields:
+        for f in template_fields:
+            for w in re.split(r"[_\s]+", f.get("name", "").lower()):
+                if len(w) >= 3:
+                    field_words.append(w)
+    field_words = sorted(set(field_words))
+
     chunk = 2000
     scored: list[tuple[float, int, str]] = []
     for i in range(0, len(text), chunk):
         seg = text[i:i + chunk]
+        seg_lower = seg.lower()
         dense = len(_PARAM_DENSE_RE.findall(seg))
         hints = len(_SECTION_HINT_RE.findall(seg))
-        score = dense * 1.0 + hints * 0.5
+        field_hits = sum(1 for w in field_words if w in seg_lower)
+        score = dense * 1.0 + hints * 0.5 + field_hits * 3.0  # 模板字段命中强加权
         scored.append((score, i, seg))
     # 至少保留开头（含标题/摘要线索），再按分补满
     head = scored[0] if scored else (0, 0, text[:chunk])
@@ -169,12 +183,18 @@ def extract_params_template(
         return {"status": "error", "error": f"无法识别设备类型（{template_name}）", "template": "general_params"}
     spec = templates[template_name]
     field_table = _field_table_text(spec["fields"])
-    fill_text = _select_param_dense_text(paper_text)
+    fill_text = _select_param_dense_text(paper_text, template_fields=spec["fields"])
 
     last_err = ""
     for attempt in range(max_retries + 1):
         prompt = _FILL_PROMPT.format(template=template_name, field_table=field_table, text=fill_text)
         raw = llm_chat([{"role": "user", "content": prompt}])
+        # DeepSeek flash 在长 prompt 下会间歇返回空响应：空响应也按可重试错误处理
+        if not raw or not raw.strip():
+            last_err = "empty_llm_response"
+            if attempt < max_retries:
+                fill_text = _select_param_dense_text(paper_text, budget=max(3000, len(fill_text) - 1500))
+            continue
         try:
             data = _extract_json(raw)
             params = _to_params(data, template_name, spec, norm_text)

@@ -17,6 +17,7 @@ from research_agent.tools import (
     arxiv_search,
     lit_extract_params,
     paper_analyze,
+    reproduce_tms,
     s4l_script,
     sim4life_manual_qa,
     tms_optimize,
@@ -38,6 +39,7 @@ ALL_DESCRIPTORS: list[ToolDescriptor] = [
     arxiv_read_pdf.DESCRIPTOR,
     lit_extract_params.DESCRIPTOR,
     paper_analyze.DESCRIPTOR,
+    reproduce_tms.DESCRIPTOR,
 ]
 
 def _check_rag_service() -> bool:
