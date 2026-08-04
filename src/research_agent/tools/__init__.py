@@ -20,6 +20,7 @@ from research_agent.tools import (
     reproduce_tms,
     s4l_model,
     s4l_script,
+    s4l_solve,
     sim4life_manual_qa,
     tms_optimize,
     web_search,
@@ -42,6 +43,7 @@ ALL_DESCRIPTORS: list[ToolDescriptor] = [
     paper_analyze.DESCRIPTOR,
     reproduce_tms.DESCRIPTOR,
     s4l_model.DESCRIPTOR,
+    s4l_solve.DESCRIPTOR,
 ]
 
 def _check_rag_service() -> bool:
@@ -69,6 +71,7 @@ _REQUIRE_CHECKS = {
     "tavily_api_key": lambda: bool(SETTINGS.tavily_api_key),
     "rag_service": _check_rag_service,
     "sim4life_installed": lambda: Path(SETTINGS.s4l_python).is_file() and Path(SETTINGS.s4l_home).is_dir(),
+    "sim4life_gui": lambda: bool(SETTINGS.s4l_gui) and Path(SETTINGS.s4l_gui).is_file(),
     "tms_venv": lambda: Path(SETTINGS.tms_python).is_file(),
     "network_arxiv": _check_network_arxiv,
     "deepseek_api_key": lambda: bool(SETTINGS.deepseek_api_key),

@@ -22,6 +22,7 @@ class Settings:
     rag_base_url: str
     s4l_home: str
     s4l_python: str
+    s4l_gui: str
     tms_project_dir: str
     tms_python: str
     artifacts_dir: str
@@ -36,6 +37,15 @@ def _resolve_artifacts_dir() -> str:
     return str(path)
 
 
+def _resolve_s4l_gui() -> str:
+    """S4L_GUI 缺省时由 S4L_HOME 推导 <S4L_HOME>/Sim4LifeLight.exe（GUI --run 执行器用）。"""
+    raw = os.getenv("S4L_GUI", "").strip()
+    if raw:
+        return raw
+    home = os.getenv("S4L_HOME", "").strip()
+    return str(Path(home) / "Sim4LifeLight.exe") if home else ""
+
+
 def load_settings() -> Settings:
     return Settings(
         deepseek_api_key=os.getenv("DEEPSEEK_API_KEY", "").strip(),
@@ -45,6 +55,7 @@ def load_settings() -> Settings:
         rag_base_url=os.getenv("RAG_BASE_URL", "http://127.0.0.1:8000").rstrip("/"),
         s4l_home=os.getenv("S4L_HOME", "").strip(),
         s4l_python=os.getenv("S4L_PYTHON", "").strip(),
+        s4l_gui=_resolve_s4l_gui(),
         tms_project_dir=os.getenv("TMS_PROJECT_DIR", "").strip(),
         tms_python=os.getenv("TMS_PYTHON", "").strip(),
         artifacts_dir=_resolve_artifacts_dir(),

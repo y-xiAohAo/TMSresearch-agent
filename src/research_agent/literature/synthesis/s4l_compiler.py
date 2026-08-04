@@ -23,7 +23,7 @@ from pathlib import Path
 
 from research_agent.config import SETTINGS
 from research_agent.literature.synthesis import BackendTask, register_compiler
-from research_agent.s4lmodel import figure8_geometry, setup
+from research_agent.s4lmodel import emlf_setup, figure8_geometry, setup
 
 
 def _default_smash_path() -> str:
@@ -80,7 +80,52 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
         parts.append(setup.emit_assign_material(materials))
 
     smash_path = overrides.get("smash_path") or _default_smash_path()
+
+    # B3 仿真级扩展（overrides.with_simulation 开启时才追加；默认路径逐字节不变）
+    # 电流源必须挂线框（pitfall #17）：为每匝补发 CreateCircle wire，
+    # 半径规则与 figure8_geometry 逐字节一致（含 r <= wr 时 clamp 到 2*wr）。
+    sim_cfg = overrides.get("with_simulation")
+    if sim_cfg is not None:
+        rings: list[dict] = []
+        pos_names: list[str] = []
+        neg_names: list[str] = []
+        wr = wire_d / 2.0
+        if wing_d:
+            sep = float(overrides.get("wing_separation") or wing_d)
+            cx = sep / 2.0
+            wing_r = float(wing_d) / 2.0
+            for wing, sign, bucket in (("wing_l", -1.0, pos_names),
+                                       ("wing_r", 1.0, neg_names)):
+                for k in range(max(1, int(turns))):
+                    r = wing_r - k * wire_d
+                    if r <= wr:
+                        r = wr * 2.0
+                    rings.append({"name": f"{wing}_turn{k}",
+                                  "center": (sign * cx, 0.0, 0.0), "radius": r})
+                    bucket.append(f"{wing}_turn{k}_wire")
+        else:
+            rings.append({"name": "loop_turn0",
+                          "center": (0.0, 0.0, 0.0), "radius": float(radius)})
+            pos_names.append("loop_turn0_wire")
+
+        wires_body, wire_names = emlf_setup.emit_current_source_wires(rings)
+        parts.append(wires_body)
+        entity_names.extend(wire_names)
+        parts.append(emlf_setup.emit_mqs_simulation(
+            sim_name="sim_tms",
+            positive_wires=pos_names,
+            current_A=float(sim_cfg.get("current_A", 1.0)),
+            wire_radius_m=wr,
+            negative_wires=neg_names or None,
+            freq_hz=float(sim_cfg.get("freq_hz", 3000.0)),
+        ))
+        notes.append("两翼电流方向假设：wing_l 正向、wing_r IsDirectionReverted=True")
+        notes.append("空气域 MQS 'nothing to solve'（pitfall #18）：仿真脚本为资产交付，"
+                     "数值验证走基准复算路径（tools/s4l_solve）")
+
     parts.append(setup.emit_save_and_report(smash_path))
+    if sim_cfg is not None:
+        parts.append(emlf_setup.emit_solve())
 
     return {
         "script_body": "\n".join(parts),

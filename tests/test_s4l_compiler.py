@@ -159,5 +159,83 @@ class VerifyParsingTests(unittest.TestCase):
         self.assertFalse(v["all_pass"])
 
 
+class WithSimulationTests(unittest.TestCase):
+    """B3 仿真级扩展：with_simulation overrides（spec §9.2）。"""
+
+    SMASH = "D:/fake/test_b3.smash"
+
+    def _compile(self, overrides):
+        return get_compiler("sim4life")(_wing_task(), overrides)
+
+    def _expected_b2_body(self):
+        """直接组合 B2 发射器得到的基线 body（回归保护基准）。"""
+        geom_body, names = figure8_geometry.emit_wing_pair(
+            wing_diameter=0.1, turns_per_wing=9, wire_diameter=0.0053,
+        )
+        mats = {n: "Copper" for n in names if n != "air"}
+        mats["air"] = "Air"
+        return "\n".join([
+            setup.emit_header(),
+            geom_body,
+            setup.emit_air_domain((0.0, 0.0, 0.0), 0.2),
+            setup.emit_assign_material(mats),
+            setup.emit_save_and_report(self.SMASH),
+        ])
+
+    def test_b2_path_byte_identical_without_sim_cfg(self):
+        # 回归保护：不开 with_simulation 时与 B2 已验证路径逐字节一致
+        out = self._compile({"smash_path": self.SMASH})
+        self.assertEqual(out["script_body"], self._expected_b2_body())
+        self.assertNotIn("CreateCircle", out["script_body"])
+        self.assertNotIn("CreateVoxels", out["script_body"])
+
+    def test_with_simulation_segments(self):
+        out = self._compile({"smash_path": self.SMASH,
+                             "with_simulation": {"current_A": 2.0}})
+        body = out["script_body"]
+        # 电流源线框：每匝一个 CreateCircle（pitfall #17）
+        self.assertEqual(body.count("model.CreateCircle("), 18)
+        self.assertIn("wing_l_turn0_wire", out["expected"]["entity_names"])
+        self.assertEqual(out["expected"]["entity_count_min"], 21 + 18)
+        # MQS 仿真段：类型化绑定 + 单位元组 + 两翼反向
+        self.assertIn("sim.AddCurrentSourceSettings(", body)
+        self.assertIn("(2, units.Amperes)", body)
+        self.assertIn("_cs_neg.IsDirectionReverted = True", body)
+        # 求解顺序铁律：SaveAs 在 CreateVoxels 前（pitfall #20）
+        self.assertLess(body.index("document.SaveAs("), body.index(".CreateVoxels()"))
+        self.assertIn(".RunSimulation(wait=True)", body)
+        # B2 几何段原样保留
+        geom_body, _ = figure8_geometry.emit_wing_pair(0.1, 9, 0.0053)
+        self.assertIn(geom_body, body)
+        # 诚实声明进 notes
+        notes = " ".join(out["notes"])
+        self.assertIn("nothing to solve", notes)
+        self.assertIn("IsDirectionReverted", notes)
+
+    def test_with_simulation_body_is_valid_python(self):
+        import py_compile, tempfile, os
+        out = self._compile({"smash_path": self.SMASH, "with_simulation": {}})
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                         encoding="utf-8") as f:
+            f.write(out["script_body"])
+            path = f.name
+        try:
+            py_compile.compile(path, doraise=True)
+        finally:
+            os.unlink(path)
+
+    def test_single_loop_sim_has_no_negative_group(self):
+        task = BackendTask(
+            geometry_intent={"kind": "coil_sphere", "params": {"radius": 0.03}},
+            constraints={"wire_diameter_mm": 2.0},
+        )
+        out = get_compiler("sim4life")(task, {
+            "smash_path": self.SMASH, "with_simulation": {}})
+        body = out["script_body"]
+        self.assertIn("loop_turn0_wire", out["expected"]["entity_names"])
+        self.assertNotIn("coil_neg", body)  # 单环无负组，不发射空绑定
+        self.assertEqual(body.count("model.CreateCircle("), 1)
+
+
 if __name__ == "__main__":
     unittest.main()
