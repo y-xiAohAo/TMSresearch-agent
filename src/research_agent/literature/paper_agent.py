@@ -55,6 +55,13 @@ finish 调用结构（严格遵守，不要嵌套、不要新增顶层键）：
 - 输出给工具外的任何自由文本都不作数，必须经 finish 提交。"""
 
 
+# 合法终态全集（e2e/测试断言以此为唯一来源，防契约漂移）
+VALID_STATUSES = frozenset({
+    "ok", "best_effort_ok", "insufficient", "reject",
+    "incomplete", "extraction_failed",
+})
+
+
 @dataclass
 class _PaperDoc:
     """已加载论文（全文 + outline + 缓存）。"""
@@ -529,6 +536,7 @@ class PaperUnderstandingAgent:
         return {"role": "tool", "tool_call_id": tc["id"], "content": str(content)[:4000]}
 
     def _done(self, status: str, started: float, result: dict | None = None, error: str = "") -> dict:
+        assert status in VALID_STATUSES, f"非法终态：{status}"
         out = {
             "status": status,
             "result": result,

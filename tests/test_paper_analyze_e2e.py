@@ -7,6 +7,14 @@ from __future__ import annotations
 import unittest
 
 
+def _dehyph(s: str) -> str:
+    """PDF 断词连字符归一：折叠空白后移除 "- "（"mag- netically" → "magnetically"）。
+
+    两侧同做，真实连字符（figure-of-eight，后无空格）不受影响。
+    """
+    return " ".join(str(s).split()).replace("- ", "")
+
+
 def _net_ok() -> bool:
     import socket
 
@@ -24,8 +32,9 @@ class RealPaperAnalyzeTests(unittest.TestCase):
 
         out = paper_analyze._paper_analyze("2511.00744", focus="simulation_params")
 
-        # 结构性不变量（不断言必须 ok——flash 模型非确定性）
-        self.assertIn(out["status"], ("ok", "incomplete", "extraction_failed"))
+        # 结构性不变量（不断言必须 ok——flash 模型非确定性；状态集以生产代码契约为准）
+        from research_agent.literature.paper_agent import VALID_STATUSES
+        self.assertIn(out["status"], VALID_STATUSES)
         pages = out["provenance"]["pages_read"]
         self.assertTrue(any(p > 2 for p in pages), f"应读到 Methods 段（>2 页），实际 {pages}")
 
@@ -39,10 +48,10 @@ class RealPaperAnalyzeTests(unittest.TestCase):
             norm_id, version = normalize_arxiv_id("2511.00744")
             cached = paper_cache.load(norm_id, version)
             self.assertIsNotNone(cached)
-            full = " ".join(paper_cache.full_text({int(k): v for k, v in cached["page_texts"].items()}).split())
+            full = _dehyph(paper_cache.full_text({int(k): v for k, v in cached["page_texts"].items()}))
             for field_key, quote in (result.get("evidence_quotes") or {}).items():
                 if quote:
-                    self.assertIn(" ".join(str(quote).split()), full, f"引句不在原文：{field_key}")
+                    self.assertIn(_dehyph(quote), full, f"引句不在原文：{field_key}")
 
 
 if __name__ == "__main__":
