@@ -34,7 +34,9 @@ User question
 | `lit_extract_params` | literature | 论文→仿真参数桥（LLM 抽取+引句） |
 | `sim4life_manual_qa` | knowledge | Sim4Life 手册 RAG（需先启动 RAG 服务） |
 | `s4l_write_script` | simulation | 写 s4l_v1 脚本（自动加 headless 引导头） |
-| `s4l_run_script` | simulation | headless 执行 Sim4Life 建模/仿真脚本 |
+| `s4l_run_script` | simulation | headless 执行 Sim4Life 建模/仿真脚本（无求解 license） |
+| `s4l_model` | simulation | TMS 线圈建模闭环：编译模板→headless 执行→实体断言验证（figure8/单环） |
+| `s4l_solve_benchmark` | simulation | 基准复算验证：GUI --run 重跑（继承 license）→h5py 逐体素对比→判定（严格串行） |
 | `tms_optimize` | compute | TMS 流函数线圈优化（NSGA2 小参数模板） |
 | `wiki_write` / `wiki_search` | knowledge | 个人 wiki 记忆读写 |
 
@@ -62,7 +64,7 @@ python scripts/demo_research.py
 
 ## 环境变量
 
-见 `.env.example`：`DEEPSEEK_API_KEY`、`TAVILY_API_KEY`、`RAG_BASE_URL`、`S4L_HOME`、`S4L_PYTHON`、`TMS_PROJECT_DIR`、`TMS_PYTHON`。
+见 `.env.example`：`DEEPSEEK_API_KEY`、`TAVILY_API_KEY`、`RAG_BASE_URL`、`S4L_HOME`、`S4L_PYTHON`、`S4L_GUI`（求解用 GUI --run 执行器，缺省从 S4L_HOME 推导）、`TMS_PROJECT_DIR`、`TMS_PYTHON`。
 
 ## 兄弟项目（只读调用，不改动）
 
