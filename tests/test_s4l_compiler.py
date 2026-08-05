@@ -203,7 +203,7 @@ class WithSimulationTests(unittest.TestCase):
         self.assertIn("_cs_neg.IsDirectionReverted = True", body)
         # 求解顺序铁律：SaveAs 在 CreateVoxels 前（pitfall #20）
         self.assertLess(body.index("document.SaveAs("), body.index(".CreateVoxels()"))
-        self.assertIn(".RunSimulation(wait=True)", body)
+        self.assertIn(".RunSimulation(wait=True, run_isolve_directly=True)", body)
         # B2 几何段原样保留
         geom_body, _ = figure8_geometry.emit_wing_pair(0.1, 9, 0.0053)
         self.assertIn(geom_body, body)

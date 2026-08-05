@@ -23,7 +23,7 @@ from pathlib import Path
 
 from research_agent.config import SETTINGS
 from research_agent.literature.synthesis import BackendTask, register_compiler
-from research_agent.s4lmodel import emlf_setup, figure8_geometry, setup
+from research_agent.s4lmodel import emlf_setup, figure8_geometry, head_geometry, setup
 
 
 def _default_smash_path() -> str:
@@ -66,17 +66,33 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
         entity_names.append("loop_turn0")
         envelope_r = float(radius) * 2.0
 
-    air_r = float(overrides.get("air_radius", envelope_r * 2.0))
-    parts.append(setup.emit_air_domain((0.0, 0.0, 0.0), air_r))
-    entity_names.append("air")
+    # B4 头模扩展（overrides.with_head_model）：三层球壳替代空气域球，
+    # 头模置于线圈下方（线圈在原点，头皮顶点与线圈间距 = coil_gap）
+    head_cfg = overrides.get("with_head_model")
+    head_names: list[str] = []
+    if head_cfg:
+        scalp_r = head_geometry.DEFAULT_LAYERS[-1][1]
+        gap = float(head_cfg.get("coil_gap_m", 0.002)) if isinstance(head_cfg, dict) else 0.002
+        head_center = (0.0, 0.0, -(scalp_r + gap))
+        body, head_names = head_geometry.emit_head_shells(center=head_center)
+        parts.append(body)
+        entity_names.extend(head_names)
+        notes.append("头模近似：三层同心球壳（脑/颅骨/头皮，ITIS 组织材料），非真实解剖结构")
+    else:
+        air_r = float(overrides.get("air_radius", envelope_r * 2.0))
+        parts.append(setup.emit_air_domain((0.0, 0.0, 0.0), air_r))
+        entity_names.append("air")
 
     # 材料指派（默认开：绕组→Copper，空气域→Air；可用 overrides 关闭/改材料）
+    # 头模实体不走字符串指派（求解器 σ 需数据库链接，见 emlf_setup.emit_material_links）
     materials: dict[str, str] = {}
     if overrides.get("assign_materials", True):
         coil_mat = overrides.get("coil_material", "Copper")
         air_mat = overrides.get("air_material", "Air")
-        materials = {n: coil_mat for n in entity_names if n != "air"}
-        materials["air"] = air_mat
+        materials = {n: coil_mat for n in entity_names
+                     if n != "air" and n not in head_names}
+        if not head_names:
+            materials["air"] = air_mat
         parts.append(setup.emit_assign_material(materials))
 
     smash_path = overrides.get("smash_path") or _default_smash_path()
@@ -111,6 +127,7 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
         wires_body, wire_names = emlf_setup.emit_current_source_wires(rings)
         parts.append(wires_body)
         entity_names.extend(wire_names)
+        grid_ents = wire_names + head_names if head_names else None
         parts.append(emlf_setup.emit_mqs_simulation(
             sim_name="sim_tms",
             positive_wires=pos_names,
@@ -118,14 +135,26 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
             wire_radius_m=wr,
             negative_wires=neg_names or None,
             freq_hz=float(sim_cfg.get("freq_hz", 3000.0)),
+            grid_entities=grid_ents,
+            max_step_m=float(sim_cfg.get("max_step_m", 0.002)) if head_names else None,
+            padding_m=float(sim_cfg.get("padding_m", 0.05)) if head_names else None,
         ))
+        if head_names:
+            # 有损域材料链接（B4 单元 1 链路）+ 分层体素器（单元 2 配方）
+            parts.append(emlf_setup.emit_material_links(
+                head_geometry.head_material_pairs()))
         notes.append("两翼电流方向假设：wing_l 正向、wing_r IsDirectionReverted=True")
-        notes.append("空气域 MQS 'nothing to solve'（pitfall #18）：仿真脚本为资产交付，"
-                     "数值验证走基准复算路径（tools/s4l_solve）")
+        if head_names:
+            notes.append("头模有损求解：脑区细网格 + 分层 Priority 体素化（Intersection 引擎）")
+        else:
+            notes.append("空气域 MQS 'nothing to solve'（pitfall #18）：仿真脚本为资产交付，"
+                         "数值验证走基准复算路径（tools/s4l_solve）")
 
     parts.append(setup.emit_save_and_report(smash_path))
     if sim_cfg is not None:
-        parts.append(emlf_setup.emit_solve())
+        parts.append(emlf_setup.emit_solve(
+            voxeler_layers=head_geometry.head_voxeler_layers() if head_names else None,
+        ))
 
     return {
         "script_body": "\n".join(parts),

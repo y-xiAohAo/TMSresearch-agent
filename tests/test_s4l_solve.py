@@ -107,7 +107,7 @@ class EmlfSetupEmitterTests(unittest.TestCase):
             ".AddAutomaticVoxelerSettings()",
             ".CreateVoxels()",
             "document.AllSimulations.Add(sim)",
-            ".RunSimulation(wait=True)",
+            ".RunSimulation(wait=True, run_isolve_directly=True)",
         ]
         pos = [body.index(s) for s in order]
         self.assertEqual(pos, sorted(pos), "求解顺序铁律被破坏")

@@ -14,11 +14,17 @@ def _fmt(x: float) -> str:
 
 
 def emit_header() -> str:
-    """脚本主体公共头部：document.New() + import。"""
+    """脚本主体公共头部：document.New() + import + 设米制单位。
+
+    pitfall #38：document.New() 默认长度单位是毫米（kMilli）——
+    不设米制则全部几何小 1000 倍（B2 曾整期中招，冒烟只验实体计数无感）。
+    """
     return """import s4l_v1.document as document
 import s4l_v1.model as model
+import s4l_v1.units as units
 
 document.New()
+model.SetLengthUnits(units.Meters)
 """
 
 
