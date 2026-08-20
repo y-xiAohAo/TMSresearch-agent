@@ -21,9 +21,13 @@ def make_llm_client(
     timeout: float = DEFAULT_TIMEOUT_S,
     max_retries: int = DEFAULT_MAX_RETRIES,
 ) -> OpenAI:
-    """构造带显式超时/重试的 DeepSeek（OpenAI 兼容）客户端。"""
+    """构造带显式超时/重试的 DeepSeek（OpenAI 兼容）客户端。
+
+    api_key 未配置时用占位符——客户端构造不失败（无密钥环境的测试/CI 可跑），
+    实际调用会由服务端返回 401，配合工具的 requires 检查前置拦截。
+    """
     return OpenAI(
-        api_key=SETTINGS.deepseek_api_key,
+        api_key=SETTINGS.deepseek_api_key or "sk-unset",
         base_url=SETTINGS.deepseek_base_url,
         timeout=timeout,
         max_retries=max_retries,
