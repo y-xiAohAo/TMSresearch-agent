@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      # litmusAgent 引擎（包名 agent），公共仓库 main 分支
+      - name: Install litmusAgent engine
+        run: pip install "git+https://github.com/y-xiAohAo/litmusAgent.git@main"
+
+      - name: Install research-agent
+        run: pip install -e ".[dev]"
+
+      # 无密钥/无 Sim4Life 环境下，冒烟与密钥类用例按 skipUnless 自动跳过；
+      # RealPaperAnalyze 需要 DeepSeek LLM 密钥，配置 DEEPSEEK_API_KEY secret 后可从 -k 排除项中移除。
+      - name: Run tests
+        run: python -m pytest tests -v -k "not RealPaperAnalyze" --tb=short
