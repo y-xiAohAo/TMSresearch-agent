@@ -20,9 +20,9 @@ from research_agent.literature.pdf import read_pdf_pages
 
 def _llm_chat(messages: list[dict]) -> str:
     """同步调 DeepSeek（OpenAI 兼容）返回文本。"""
-    from openai import OpenAI
+    from research_agent.llm_util import make_llm_client
 
-    client = OpenAI(api_key=SETTINGS.deepseek_api_key, base_url=SETTINGS.deepseek_base_url)
+    client = make_llm_client()
     resp = client.chat.completions.create(
         model=SETTINGS.chat_model,
         messages=messages,

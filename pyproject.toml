@@ -16,6 +16,7 @@ dependencies = [
     "pyyaml>=6.0",
     "h5py>=3.8",
     "numpy>=1.26",
+    "chromadb>=0.5",
 ]
 
 [project.optional-dependencies]

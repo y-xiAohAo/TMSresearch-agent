@@ -14,11 +14,10 @@ from research_agent.literature.paper_agent import PaperUnderstandingAgent
 
 def _llm_chat(messages: list[dict], tools: list[dict] | None = None) -> dict:
     """调 DeepSeek（OpenAI 兼容 chat completions，支持 tools）。"""
-    from openai import OpenAI
-
     from research_agent.config import SETTINGS
+    from research_agent.llm_util import make_llm_client
 
-    client = OpenAI(api_key=SETTINGS.deepseek_api_key, base_url=SETTINGS.deepseek_base_url)
+    client = make_llm_client()
     kwargs = {
         "model": SETTINGS.chat_model,
         "messages": messages,

@@ -5,6 +5,10 @@
 
 科研智能体：ReAct 循环编排 15 个工具（文献检索 / 论文参数抽取 / Sim4Life 建模与有损求解 / TMS 线圈优化 / wiki 记忆），打通"论文 → 仿真参数 → 头模建模 → 有损求解 → 定量场验证"的科研自动化闭环，并把研究结论沉淀为个人 wiki 知识库。
 
+![demo](docs/images/demo.gif)
+
+> Demo：agent 自主完成"检索论文 → 子代理抽取仿真参数 → 写入 wiki"的文献链路（真实运行录制，`scripts/record_demo.py` 可复现）。
+
 - 测试：162 collected / 157 非冒烟全绿（CI 在线可验证，冒烟类需真实 Sim4Life 环境自动跳过）
 - 定量验证：基准复算 E 场三分量 max 相对差 0.000%（~79 万体素/分量）；网格收敛 4.60%；头模有损求解 6 迭代收敛
 
@@ -52,7 +56,7 @@ User question
 | `s4l_solve_benchmark` | simulation | 基准复算验证：GUI --run 重跑（继承 license）→h5py 逐体素对比→判定（严格串行） |
 | `tms_optimize` | compute | TMS 流函数线圈优化（NSGA2 小参数模板） |
 | `reproduce_tms` | compute | 论文→优化端到端复现编排（synthesis 底盘 + 对比报告） |
-| `wiki_write` / `wiki_search` | knowledge | 个人 wiki 记忆读写 |
+| `wiki_write` / `wiki_search` | knowledge | 个人 wiki 记忆读写（向量+关键词混合语义检索，chroma 本地索引） |
 
 ## 快速开始
 

@@ -13,6 +13,7 @@ dist/
 artifacts/
 *.smash
 logs/
+chroma_wiki/
 
 # ---- SDD-RIPER 工作产物（骨架保留，内容不入库）----
 mydocs/specs/*
