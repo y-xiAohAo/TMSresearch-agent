@@ -1,6 +1,18 @@
 # Research Agent
 
-科研智能体：ReAct 循环驱动 Sim4Life 知识库、Sim4Life 建模脚本、TMS 线圈优化与联网搜索，并把研究结论沉淀为个人 wiki 知识库。
+[![CI](https://github.com/y-xiAohAo/TMSresearch-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/y-xiAohAo/TMSresearch-agent/actions/workflows/ci.yml)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue)
+
+科研智能体：ReAct 循环编排 15 个工具（文献检索 / 论文参数抽取 / Sim4Life 建模与有损求解 / TMS 线圈优化 / wiki 记忆），打通"论文 → 仿真参数 → 头模建模 → 有损求解 → 定量场验证"的科研自动化闭环，并把研究结论沉淀为个人 wiki 知识库。
+
+- 测试：162 collected / 157 非冒烟全绿（CI 在线可验证，冒烟类需真实 Sim4Life 环境自动跳过）
+- 定量验证：基准复算 E 场三分量 max 相对差 0.000%（~79 万体素/分量）；网格收敛 4.60%；头模有损求解 6 迭代收敛
+
+## 定量场验证（B4 头模有损求解）
+
+![E-field focal profile](docs/images/b4_efield_focal_profile.png)
+
+figure8 线圈 + 三层球壳头模（脑/颅骨/头皮，ITIS 组织电导率）的 MQS 求解结果：场峰位于头表线圈正下方，向脑内单调衰减；~20mm 深度处 E/I ≈ 1.9e-2 V/m/A（5kA 等效 ≈96 V/m，正处 TMS 刺激阈值量级）。可复现：`python scripts/plot_b4_field_profile.py`（h5py 直读 Output.h5）。
 
 ## 架构
 
@@ -20,7 +32,7 @@ User question
 ```
 
 - **编排**：litmusAgent `Agent` 引擎（`../litmusAgent`，editable 安装），LLM 走 DeepSeek（OpenAI 兼容）。
-- **工具**：`src/research_agent/tools/`，每个文件导出 `ToolDescriptor`（含 category/cost_hint/requires 元数据），`register_all_tools()` 注册。新增工具只需丢一个文件进目录。
+- **工具**：`src/research_agent/tools/`，每个文件导出 `ToolDescriptor`（含 category/cost_hint/requires 元数据），在 `register_all_tools()` 中显式注册（M2 规划目录自动发现）。
 - **扩展性**：`ToolDescriptor.requires` 启动自检；M2 将加入目录自动发现、执行钩子链（experiment tracking）与异步任务抽象（见 `mydocs/specs/2026-07-21_m1-research-agent.md` §4.4）。
 
 ## 工具清单
@@ -32,12 +44,14 @@ User question
 | `arxiv_fetch` | literature | arXiv 元数据获取 + PDF 归档 |
 | `arxiv_read_pdf` | literature | arXiv PDF 按页阅读（pymupdf） |
 | `lit_extract_params` | literature | 论文→仿真参数桥（LLM 抽取+引句） |
+| `paper_analyze` | literature | 论文理解子代理（agent-as-tool，语义导航+结构化抽取） |
 | `sim4life_manual_qa` | knowledge | Sim4Life 手册 RAG（需先启动 RAG 服务） |
 | `s4l_write_script` | simulation | 写 s4l_v1 脚本（自动加 headless 引导头） |
 | `s4l_run_script` | simulation | headless 执行 Sim4Life 建模/仿真脚本（无求解 license） |
 | `s4l_model` | simulation | TMS 线圈建模闭环：编译模板→headless 执行→实体断言验证（figure8/单环） |
 | `s4l_solve_benchmark` | simulation | 基准复算验证：GUI --run 重跑（继承 license）→h5py 逐体素对比→判定（严格串行） |
 | `tms_optimize` | compute | TMS 流函数线圈优化（NSGA2 小参数模板） |
+| `reproduce_tms` | compute | 论文→优化端到端复现编排（synthesis 底盘 + 对比报告） |
 | `wiki_write` / `wiki_search` | knowledge | 个人 wiki 记忆读写 |
 
 ## 快速开始

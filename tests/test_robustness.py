@@ -34,15 +34,23 @@ class RagDownRobustnessTests(unittest.TestCase):
 
 class TmsTimeoutRobustnessTests(unittest.TestCase):
     def test_tms_timeout_returns_structured_partial(self):
-        from research_agent.tools import tms_optimize
+        import dataclasses
         import subprocess
 
-        with patch.object(
-            tms_optimize.subprocess, "run",
-            side_effect=subprocess.TimeoutExpired(cmd="tms", timeout=1),
-        ):
-            with patch.object(tms_optimize.Path, "is_file", return_value=True):
-                result = tms_optimize._tms_optimize({"Nsteps": 2}, budget_s=1)
+        from research_agent.config import SETTINGS
+        from research_agent.tools import tms_optimize
+
+        # SETTINGS 为 frozen dataclass；TMS_PYTHON 未配置时守卫会先抛错，
+        # 此处 patch 模块级引用为替身（Path.is_file 已 mock 为 True），
+        # 保证无 TMS 环境（如 CI）也能测试超时分支。
+        fake_settings = dataclasses.replace(SETTINGS, tms_python="D:/fake/tms_python.exe")
+        with patch.object(tms_optimize, "SETTINGS", fake_settings):
+            with patch.object(
+                tms_optimize.subprocess, "run",
+                side_effect=subprocess.TimeoutExpired(cmd="tms", timeout=1),
+            ):
+                with patch.object(tms_optimize.Path, "is_file", return_value=True):
+                    result = tms_optimize._tms_optimize({"Nsteps": 2}, budget_s=1)
         self.assertEqual(result["status"], "timeout")
         self.assertIn("config_path", result)
         self.assertIn("duration_s", result)

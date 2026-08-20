@@ -38,6 +38,12 @@ class DescriptorContractTests(unittest.TestCase):
         self.assertIsInstance(missing, dict)
 
 
+def _has_env_key() -> bool:
+    from research_agent.config import SETTINGS
+
+    return bool(SETTINGS.tavily_api_key)
+
+
 class WebSearchContractTests(unittest.TestCase):
     @unittest.skipUnless(
         __import__("os").getenv("TAVILY_API_KEY") or _has_env_key(),
@@ -51,12 +57,6 @@ class WebSearchContractTests(unittest.TestCase):
         self.assertIn("title", item)
         self.assertIn("url", item)
         self.assertIn("content", item)
-
-
-def _has_env_key() -> bool:
-    from research_agent.config import SETTINGS
-
-    return bool(SETTINGS.tavily_api_key)
 
 
 class ManualQaContractTests(unittest.TestCase):
@@ -97,13 +97,16 @@ class ManualQaContractTests(unittest.TestCase):
         self.assertEqual(result["answer"], "第一步：点击 New。")
 
 
+def _settings_path_ok(attr: str) -> bool:
+    """skip 条件与工具实际使用的配置口径一致（CI/无配置环境自动跳过）。"""
+    from research_agent.config import SETTINGS
+
+    p = getattr(SETTINGS, attr, "") or ""
+    return bool(p) and __import__("pathlib").Path(p).is_file()
+
+
 class S4lScriptSmokeTests(unittest.TestCase):
-    @unittest.skipUnless(
-        __import__("pathlib").Path(
-            "D:/Sim4life/sim4lifeprogram/Sim4LifeLight_7.0.0.7995/Python/python.exe"
-        ).is_file(),
-        "需要本机 Sim4Life 安装",
-    )
+    @unittest.skipUnless(_settings_path_ok("s4l_python"), "需要本机 Sim4Life 安装（S4L_PYTHON）")
     def test_headless_create_and_save(self):
         import tempfile
         from pathlib import Path
@@ -126,12 +129,7 @@ class S4lScriptSmokeTests(unittest.TestCase):
 
 
 class TmsOptimizeContractTests(unittest.TestCase):
-    @unittest.skipUnless(
-        __import__("pathlib").Path(
-            "D:/myvibeproject/StreamFunctionTMS/.venv/Scripts/python.exe"
-        ).is_file(),
-        "需要 StreamFunctionTMS venv",
-    )
+    @unittest.skipUnless(_settings_path_ok("tms_python"), "需要 StreamFunctionTMS venv（TMS_PYTHON）")
     def test_small_optimization_runs(self):
         result = tms_optimize._tms_optimize(
             {"Nsteps": 2, "pop_size": 10, "n_gen": 2},
