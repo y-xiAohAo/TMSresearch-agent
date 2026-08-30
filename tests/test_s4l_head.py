@@ -84,6 +84,16 @@ class LossyGridVoxelerTests(unittest.TestCase):
         self.assertIn("sim.AddAutomaticVoxelerSettings()", body)
         self.assertNotIn("kIntersectionVoxeler", body)
 
+    def test_solve_run_solve_false_truncation(self):
+        # 预检模式：CreateVoxels 后截断，不越出 headless 已验证区间
+        body = emlf_setup.emit_solve(run_solve=False)
+        self.assertIn("sim.CreateVoxels()", body)
+        self.assertIn("REPORT|PREFLIGHT|OK", body)
+        self.assertNotIn("WriteInputFile", body)
+        self.assertNotIn("RunSimulation", body)
+        self.assertNotIn("AllSimulations.Add", body)
+        self.assertNotIn("REPORT|SOLVE|", body)
+
 
 class CompilerHeadModelTests(unittest.TestCase):
     SMASH = "D:/fake/test_b4.smash"
@@ -137,6 +147,35 @@ class CompilerHeadModelTests(unittest.TestCase):
             py_compile.compile(path, doraise=True)
         finally:
             os.unlink(path)
+
+    def test_head_model_custom_layers(self):
+        # with_head_model 透传 layers：半径/材料名/优先级反映在产物中
+        layers = (
+            ("inner", 0.05, "Brain (Grey Matter)", 20),
+            ("outer", 0.07, "Skull Cortical", 10),
+        )
+        out = self._compile({"with_head_model": {"layers": layers},
+                             "with_simulation": {}})
+        body = out["script_body"]
+        self.assertEqual(body.count("model.CreateSolidSphere("), 2)
+        self.assertIn("0.07", body)  # outer 半径
+        self.assertIn('"outer"', body)
+        self.assertEqual(out["expected"]["entity_names"].count("inner"), 1)
+        # 材料链接与分层体素器跟随自定义 layers
+        self.assertIn('_link_material("inner", "Brain (Grey Matter)")', body)
+        self.assertIn('_avs.Priority = 20', body)
+        self.assertNotIn("scalp", body)  # 默认层不再出现
+        # 头心位置按自定义外层半径 + gap（0.07 + 0.002）
+        self.assertIn("-0.072", body)
+
+    def test_head_model_default_layers_unchanged(self):
+        # 回归：不传 layers 时与默认三层逐字节一致
+        out = self._compile({"with_head_model": True, "with_simulation": {}})
+        body = out["script_body"]
+        geom_body, _ = head_geometry.emit_head_shells(center=(0.0, 0.0, -0.094))
+        self.assertIn(geom_body, body)
+        self.assertIn('_link_material("scalp", "Skin")', body)
+        self.assertIn('_avs.Priority = 30', body)
 
 
 if __name__ == "__main__":

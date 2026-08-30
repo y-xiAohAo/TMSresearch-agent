@@ -74,6 +74,16 @@ def _verify(run: dict, expected: dict) -> dict:
                    "pass": not missing and report["report_done"],
                    "detail": f"missing={missing}" if missing else "all present"})
 
+    # 求解段完成标记（expected.report_marker 非空时）：
+    # 预检模式为 REPORT|PREFLIGHT|OK，求解模式为 REPORT|SOLVE|HasResults
+    marker = expected.get("report_marker")
+    if marker:
+        hit = any(line.strip().startswith(marker)
+                  for line in (run.get("stdout") or "").splitlines())
+        checks.append({"name": "report_marker",
+                       "pass": hit,
+                       "detail": marker if hit else f"missing {marker}"})
+
     # 材料指派核验（expected.materials 非空时）：每个实体材料值等于期望且非 FAIL
     exp_mats = expected.get("materials") or {}
     if exp_mats:
@@ -100,6 +110,13 @@ def _s4l_model(
     wire_diameter_mm: float = 2.0,
     air_radius: float | None = None,
     timeout_s: int = 600,
+    with_simulation: bool = False,
+    with_head_model: bool = False,
+    run_solve: bool = False,
+    current_A: float = 1.0,
+    freq_hz: float = 3000.0,
+    head_layers: list | None = None,
+    sim_name: str = "sim_tms",
 ) -> dict:
     """编译并 headless 执行一个 TMS 线圈建模脚本，返回验证报告。"""
     started = time.perf_counter()
@@ -129,9 +146,24 @@ def _s4l_model(
     overrides: dict = {}
     if air_radius:
         overrides["air_radius"] = air_radius
+    if with_simulation:
+        overrides["with_simulation"] = {
+            "current_A": current_A,
+            "freq_hz": freq_hz,
+            "run_solve": run_solve,
+        }
+    if with_head_model:
+        # compiler 接受 dict（可取 layers/coil_gap_m）或真值（默认层配方）
+        overrides["with_head_model"] = {"layers": head_layers} if head_layers else True
+    if sim_name != "sim_tms":
+        overrides["sim_name"] = sim_name
     compiled = compiler(task, overrides)
     body = compiled["script_body"]
-    expected = compiled["expected"]
+    expected = dict(compiled["expected"])
+    if with_simulation:
+        # 求解段完成标记：预检（CreateVoxels 后截断）/ 求解（HasResults 打印）
+        expected["report_marker"] = ("REPORT|SOLVE|HasResults" if run_solve
+                                     else "REPORT|PREFLIGHT|OK")
 
     # 写脚本 + 执行（复用 s4l_script 工具层）
     try:
@@ -174,6 +206,11 @@ DESCRIPTOR = ToolDescriptor(
             "用 Sim4Life headless 建一个 TMS 线圈模型（figure8 双翼或单环）："
             "编译经实测验证的模板脚本→S4L 内核执行→产出 .smash 并做实体断言验证。"
             "几何为同心圆环组近似（非真实螺旋）。"
+            "可选 with_simulation 追加 MQS 仿真设置（电流源/边界/网格），"
+            "with_head_model 用三层球壳头模替代空气域。"
+            "默认 run_solve=False 为预检模式：脚本在建模/网格/体素化后截断"
+            "（REPORT|PREFLIGHT|OK），本机无 QS_SOLVER license 也可闭环；"
+            "需要真正求解时请改用 s4l_solve_run 工具。"
         ),
         parameters={
             "type": "object",
@@ -186,6 +223,21 @@ DESCRIPTOR = ToolDescriptor(
                 "air_radius": {"type": "number", "description": "空气域球半径（米），默认自动"},
                 "timeout_s": {"type": "integer", "default": 600,
                               "description": "S4L 内核执行超时（启动需 60-100s）"},
+                "with_simulation": {"type": "boolean", "default": False,
+                                    "description": "追加 MQS 仿真设置（电流源/边界/网格/体素化）"},
+                "with_head_model": {"type": "boolean", "default": False,
+                                    "description": "三层球壳头模（脑/颅骨/头皮）替代空气域"},
+                "run_solve": {"type": "boolean", "default": False,
+                              "description": "True 时脚本含 RunSimulation（需 QS_SOLVER license，"
+                                             "本工具 headless 环境会报错；求解请用 s4l_solve_run）"},
+                "current_A": {"type": "number", "default": 1.0,
+                              "description": "线圈电流（A），with_simulation=True 时生效"},
+                "freq_hz": {"type": "number", "default": 3000.0,
+                            "description": "激励频率（Hz），with_simulation=True 时生效"},
+                "head_layers": {"type": "array", "items": {"type": "array"},
+                                "description": "头模分层 [[name, radius_m], ...]，with_head_model=True 时生效"},
+                "sim_name": {"type": "string", "default": "sim_tms",
+                             "description": "仿真实体名"},
             },
             "required": [],
         },

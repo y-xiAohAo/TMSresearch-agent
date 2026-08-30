@@ -169,7 +169,8 @@ def emit_material_links(pairs: list[tuple[str, str]]) -> str:
 
 
 def emit_solve(sim_var: str = "sim",
-               voxeler_layers: list[tuple[str, int]] | None = None) -> str:
+               voxeler_layers: list[tuple[str, int]] | None = None,
+               run_solve: bool = True) -> str:
     """求解段：顺序铁律（pitfall #20），不含 SaveAs。
 
     前置约束：上游必须先完成 UpdateGrid 之前的设置与 document.SaveAs
@@ -179,6 +180,10 @@ def emit_solve(sim_var: str = "sim",
     settings + 递增优先级（内层高）；给定时不发射默认 voxeler 行，
     改用分层绑定 + kIntersectionVoxeler（pitfall #39：Topological 对脚本
     实体恒报 Voxels: None）。
+
+    run_solve=False（headless 预检模式）：CreateVoxels 之后截断——不发射
+    WriteInputFile/RunSimulation/HasResults（CreateVoxels 及之前为 headless
+    已验证区间，保守不越界），改打印 REPORT|PREFLIGHT|OK 作预检完成标记。
     """
     if voxeler_layers:
         vox = ["", "# --- emlf: layered voxeler (intersection engine) ---",
@@ -203,14 +208,20 @@ def emit_solve(sim_var: str = "sim",
     else:
         voxeler_block = f"{sim_var}.AddAutomaticVoxelerSettings()\n"
 
-    return f'''
-# --- emlf: solve (order is load-bearing, pitfall #20) ---
-{sim_var}.UpdateGrid()
-# NOTE: document.SaveAs 必须已在前面完成（emit_save_and_report），否则 CreateVoxels 报错
-{voxeler_block}{sim_var}.CreateVoxels()
-document.AllSimulations.Add({sim_var})
+    tail = f'''{sim_var}.CreateVoxels()
+'''
+    if run_solve:
+        tail += f'''document.AllSimulations.Add({sim_var})
 {sim_var}.WriteInputFile()  # 先落输入：headless 可核验网格/材料/体素，无需 license
 {sim_var}.RunSimulation(wait=True, run_isolve_directly=True)  # Ares 路径报笼统错误，iSolve 子进程给真实错误
 print("REPORT|SOLVE|HasResults|" + str({sim_var}.HasResults()))
 print("REPORT|DONE")
 '''
+    else:
+        # 预检截断点：AllSimulations.Add 及以后未在 headless 验证区间内
+        tail += 'print("REPORT|PREFLIGHT|OK")\n'
+    return f'''
+# --- emlf: solve (order is load-bearing, pitfall #20) ---
+{sim_var}.UpdateGrid()
+# NOTE: document.SaveAs 必须已在前面完成（emit_save_and_report），否则 CreateVoxels 报错
+{voxeler_block}{tail}'''

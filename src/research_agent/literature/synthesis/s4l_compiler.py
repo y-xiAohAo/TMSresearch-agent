@@ -70,11 +70,15 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
     # 头模置于线圈下方（线圈在原点，头皮顶点与线圈间距 = coil_gap）
     head_cfg = overrides.get("with_head_model")
     head_names: list[str] = []
+    head_layers = (head_cfg.get("layers")
+                   if isinstance(head_cfg, dict) else None)
     if head_cfg:
-        scalp_r = head_geometry.DEFAULT_LAYERS[-1][1]
+        layers = head_layers or head_geometry.DEFAULT_LAYERS
+        scalp_r = layers[-1][1]
         gap = float(head_cfg.get("coil_gap_m", 0.002)) if isinstance(head_cfg, dict) else 0.002
         head_center = (0.0, 0.0, -(scalp_r + gap))
-        body, head_names = head_geometry.emit_head_shells(center=head_center)
+        body, head_names = head_geometry.emit_head_shells(center=head_center,
+                                                          layers=head_layers)
         parts.append(body)
         entity_names.extend(head_names)
         notes.append("头模近似：三层同心球壳（脑/颅骨/头皮，ITIS 组织材料），非真实解剖结构")
@@ -129,7 +133,7 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
         entity_names.extend(wire_names)
         grid_ents = wire_names + head_names if head_names else None
         parts.append(emlf_setup.emit_mqs_simulation(
-            sim_name="sim_tms",
+            sim_name=str(overrides.get("sim_name", "sim_tms")),
             positive_wires=pos_names,
             current_A=float(sim_cfg.get("current_A", 1.0)),
             wire_radius_m=wr,
@@ -142,7 +146,7 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
         if head_names:
             # 有损域材料链接（B4 单元 1 链路）+ 分层体素器（单元 2 配方）
             parts.append(emlf_setup.emit_material_links(
-                head_geometry.head_material_pairs()))
+                head_geometry.head_material_pairs(layers=head_layers)))
         notes.append("两翼电流方向假设：wing_l 正向、wing_r IsDirectionReverted=True")
         if head_names:
             notes.append("头模有损求解：脑区细网格 + 分层 Priority 体素化（Intersection 引擎）")
@@ -153,7 +157,9 @@ def s4l_compiler(task: BackendTask, overrides: dict | None = None) -> dict:
     parts.append(setup.emit_save_and_report(smash_path))
     if sim_cfg is not None:
         parts.append(emlf_setup.emit_solve(
-            voxeler_layers=head_geometry.head_voxeler_layers() if head_names else None,
+            voxeler_layers=(head_geometry.head_voxeler_layers(layers=head_layers)
+                            if head_names else None),
+            run_solve=bool(sim_cfg.get("run_solve", True)),
         ))
 
     return {

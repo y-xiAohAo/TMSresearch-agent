@@ -236,6 +236,52 @@ class WithSimulationTests(unittest.TestCase):
         self.assertNotIn("coil_neg", body)  # 单环无负组，不发射空绑定
         self.assertEqual(body.count("model.CreateCircle("), 1)
 
+    def test_run_solve_true_default_unchanged(self):
+        # 默认 run_solve=True：行为不变（显式断言，回归保护）
+        out = self._compile({"smash_path": self.SMASH, "with_simulation": {}})
+        body = out["script_body"]
+        self.assertIn(".RunSimulation(wait=True, run_isolve_directly=True)", body)
+        self.assertIn("REPORT|SOLVE|HasResults|", body)
+        self.assertNotIn("REPORT|PREFLIGHT|OK", body)
+
+    def test_run_solve_false_preflight_truncation(self):
+        # run_solve=False：CreateVoxels 后截断（headless 预检模式）
+        out = self._compile({"smash_path": self.SMASH,
+                             "with_simulation": {"run_solve": False}})
+        body = out["script_body"]
+        self.assertIn(".CreateVoxels()", body)
+        self.assertIn("REPORT|PREFLIGHT|OK", body)
+        self.assertNotIn("WriteInputFile", body)
+        self.assertNotIn("RunSimulation", body)
+        self.assertNotIn("AllSimulations.Add", body)
+        self.assertNotIn("REPORT|SOLVE|", body)
+        # 截断点在已验证区间内：CreateVoxels 之后仅剩 PREFLIGHT 打印
+        self.assertLess(body.index(".CreateVoxels()"),
+                        body.index("REPORT|PREFLIGHT|OK"))
+
+    def test_run_solve_false_body_is_valid_python(self):
+        import py_compile, tempfile, os
+        out = self._compile({"smash_path": self.SMASH,
+                             "with_simulation": {"run_solve": False}})
+        with tempfile.NamedTemporaryFile("w", suffix=".py", delete=False,
+                                         encoding="utf-8") as f:
+            f.write(out["script_body"])
+            path = f.name
+        try:
+            py_compile.compile(path, doraise=True)
+        finally:
+            os.unlink(path)
+
+    def test_sim_name_override(self):
+        out = self._compile({"smash_path": self.SMASH,
+                             "with_simulation": {}, "sim_name": "sim_custom"})
+        body = out["script_body"]
+        self.assertIn('sim.Name = "sim_custom"', body)
+        self.assertNotIn("sim_tms", body)
+        # 缺省仍为 sim_tms（回归）
+        out2 = self._compile({"smash_path": self.SMASH, "with_simulation": {}})
+        self.assertIn('sim.Name = "sim_tms"', out2["script_body"])
+
 
 if __name__ == "__main__":
     unittest.main()
